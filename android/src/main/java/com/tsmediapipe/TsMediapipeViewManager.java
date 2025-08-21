@@ -277,6 +277,16 @@ public class TsMediapipeViewManager extends ViewGroupManager<FrameLayout> {
     GlobalState.isRightAnkleEnabled = rightAnkle;
   }
 
+  @ReactProp(name = "drawOverlay")
+  public void setDrawOverlayProp(View view, boolean drawOverlay) {
+    GlobalState.isDrawOverlayEnabled = drawOverlay;
+  }
+
+  @ReactProp(name = "modelType")
+  public void setModelTypeProp(View view, String modelType) {
+    GlobalState.currentModelType = modelType;
+  }
+
   /**
    * Replace your React Native view with a custom fragment
    */

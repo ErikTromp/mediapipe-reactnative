@@ -21,6 +21,7 @@ struct PoseOverlay: Codable {
 class OverlayView: UIView {
     
     var poseOverlays: [PoseOverlay] = []
+    var shouldDrawOverlay: Bool = true
     
     private var contentImageSize: CGSize = CGSizeZero
     var imageContentMode: UIView.ContentMode = .scaleAspectFit
@@ -73,6 +74,10 @@ class OverlayView: UIView {
     }
     
     override func draw(_ rect: CGRect) {
+        if !shouldDrawOverlay {
+            return
+        }
+        
         for poseOverlay in poseOverlays {
             drawLines(poseOverlay.lines)
             //      drawDots(poseOverlay.dots)

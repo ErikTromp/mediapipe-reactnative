@@ -50,6 +50,11 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
   override fun draw(canvas: Canvas) {
     super.draw(canvas)
 
+    // Check if overlay drawing is enabled
+    if (!GlobalState.isDrawOverlayEnabled) {
+      return
+    }
+
     val face = GlobalState.isFaceEnabled
     val torso = GlobalState.isTorsoEnabled
     val leftArm = GlobalState.isLeftArmEnabled

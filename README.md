@@ -52,6 +52,8 @@ Add these to your project's manifest.
 | `rightLeg`  | Toggles visibility of the right leg in the body model. Affects the data provided by `onLandmark`. |
 | `leftAnkle` | Toggles visibility of the left ankle in the body model. Affects the data provided by `onLandmark`.|
 | `rightAnkle`| Toggles visibility of the right ankle in the body model. Affects the data provided by `onLandmark`.|
+| `drawOverlay`| Toggles the drawing of pose landmark overlay on the camera view. Set to `false` to improve performance.|
+| `modelType` | Sets the MediaPipe model type. Options: `'full'` (default), `'lite'`, `'heavy'`. Lite model provides better performance. Note: Only the full model is included by default. To use lite/heavy models, download them from MediaPipe and add to your project.|
 
 
 ## Usage
@@ -152,7 +154,43 @@ export default function App() {
     )
 }
 
+### Usage with performance optimization props
+
+```js
+import { RNMediapipe } from '@thinksys/react-native-mediapipe';
+
+export default function App() {
+
+    return (
+        <View>
+            <RNMediapipe 
+                width={400}
+                height={300}
+                drawOverlay={false}  // Disable overlay drawing for better performance
+                modelType="lite"     // Use lite model for faster inference
+                onLandmark={(data) => {
+                    console.log('Body Landmark Data:', data);
+                }}
+            />
+        </View>
+    )
+}
+
 ```
+
+## Model Files
+
+The library includes the full MediaPipe pose landmarker model by default. For better performance, you can use the lite or heavy models:
+
+### Android
+1. Download the desired model from [MediaPipe](https://developers.google.com/mediapipe/solutions/vision/pose_landmarker#models)
+2. Place the model file in `android/src/main/assets/`
+3. Use the `modelType` prop to specify which model to use
+
+### iOS
+1. Download the desired model from [MediaPipe](https://developers.google.com/mediapipe/solutions/vision/pose_landmarker#models)
+2. Add the model file to your Xcode project
+3. Use the `modelType` prop to specify which model to use
 
 ## Contributing
 

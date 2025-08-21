@@ -11,6 +11,8 @@ public class GlobalState {
   public static boolean isRightLegEnabled = false;
   public static boolean isLeftAnkleEnabled = false;
   public static boolean isRightAnkleEnabled = false;
+  public static boolean isDrawOverlayEnabled = true;
+  public static String currentModelType = "full";
 
   public static String orientation = "portrait";
 }

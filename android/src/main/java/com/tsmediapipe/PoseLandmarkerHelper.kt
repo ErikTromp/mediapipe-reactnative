@@ -40,6 +40,34 @@ class PoseLandmarkerHelper(
     poseLandmarker = null
   }
 
+  fun updateModelType(modelType: String) {
+    val newModel = when (modelType) {
+      "lite" -> MODEL_POSE_LANDMARKER_LITE
+      "heavy" -> MODEL_POSE_LANDMARKER_HEAVY
+      else -> MODEL_POSE_LANDMARKER_FULL
+    }
+    
+    // Check if the model file exists before switching
+    val modelName = when (newModel) {
+      MODEL_POSE_LANDMARKER_LITE -> "pose_landmarker_lite.task"
+      MODEL_POSE_LANDMARKER_HEAVY -> "pose_landmarker_heavy.task"
+      else -> "pose_landmarker_full.task"
+    }
+    
+    try {
+      context.assets.open(modelName).use { 
+        // Model exists, proceed with update
+        currentModel = newModel
+        setupPoseLandmarker()
+      }
+    } catch (e: Exception) {
+      // Model doesn't exist, fallback to full model
+      Log.w("PoseLandmarkerHelper", "Model $modelName not found, using full model instead")
+      currentModel = MODEL_POSE_LANDMARKER_FULL
+      setupPoseLandmarker()
+    }
+  }
+
   // Return running status of PoseLandmarkerHelper
   fun isClose(): Boolean {
     return poseLandmarker == null

@@ -120,6 +120,16 @@ class CameraView: UIView {
             updateBodyTrack()
         }
     }
+    @objc var drawOverlay: Bool = true {
+        didSet {
+            updateBodyTrack()
+        }
+    }
+    @objc var modelType: String = "full" {
+        didSet {
+            updateModelType()
+        }
+    }
     
     
     @objc var orientation: NSNumber = 0 {
@@ -164,7 +174,29 @@ class CameraView: UIView {
             "rightLeg": rightLeg,
             "leftAnkle": leftAnkle,
             "rightAnkle": rightAnkle,
+            "drawOverlay": drawOverlay,
         ]
+    }
+    
+    private func updateModelType() {
+        // Update the model type in the pose landmarker service
+        if let poseLandmarkerService = poseLandmarkerService {
+            let modelPath = getModelPath(for: modelType)
+            poseLandmarkerService.updateModel(modelPath: modelPath)
+        }
+    }
+    
+    private func getModelPath(for modelType: String) -> String {
+        switch modelType {
+        case "lite":
+            let litePath = Bundle.main.path(forResource: "pose_landmarker_lite", ofType: "task")
+            return litePath ?? Bundle.main.path(forResource: "pose_landmarker_full", ofType: "task") ?? ""
+        case "heavy":
+            let heavyPath = Bundle.main.path(forResource: "pose_landmarker_heavy", ofType: "task")
+            return heavyPath ?? Bundle.main.path(forResource: "pose_landmarker_full", ofType: "task") ?? ""
+        default:
+            return Bundle.main.path(forResource: "pose_landmarker_full", ofType: "task") ?? ""
+        }
     }
     
     // MARK: Constraints
@@ -491,6 +523,7 @@ extension CameraView: PoseLandmarkerServiceLiveStreamDelegate {
                         andOrientation: UIImage.Orientation.from(
                             deviceOrientation:  UIDevice.current.orientation ), isPortrait: self!.isPortrait, propDictionary: self!.propDictionary!)
                     weakSelf.overlayView.clear()
+                    weakSelf.overlayView.shouldDrawOverlay = self!.drawOverlay
                     weakSelf.overlayView.draw(poseOverlays: poseOverlays,
                                               inBoundsOfContentImageOfSize: imageSize,
                                               imageContentMode: weakSelf.cameraFeedService.videoGravity.contentMode,

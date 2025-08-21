@@ -247,6 +247,14 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
     bindCameraUseCases()
   }
 
+  fun updateModelType(modelType: String) {
+    if (this::poseLandmarkerHelper.isInitialized) {
+      backgroundExecutor.execute {
+        poseLandmarkerHelper.updateModelType(modelType)
+      }
+    }
+  }
+
   override fun onConfigurationChanged(newConfig: Configuration) {
     super.onConfigurationChanged(newConfig)
     imageAnalyzer?.targetRotation =
@@ -309,13 +317,9 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
           "worldLandmarks" to worldLandmarksArray
         )
 
-
-        val gson = Gson()
-        val jsonData = gson.toJson(swiftDict)
-
         val reactContext = ReactContextProvider.reactApplicationContext
         reactContext?.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-          ?.emit("onLandmark", jsonData)
+          ?.emit("onLandmark", swiftDict)
 
         fragmentCameraBinding.myOverlay.setResults(
           resultBundle.results.first(),

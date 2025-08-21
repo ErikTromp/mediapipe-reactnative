@@ -172,6 +172,16 @@ class PoseLandmarkerService: NSObject {
             }
         }
     
+    func clearPoseLandmarker() {
+        poseLandmarker = nil
+    }
+    
+    func updateModel(modelPath: String) {
+        clearPoseLandmarker()
+        self.modelPath = modelPath
+        createPoseLandmarker()
+    }
+    
     func detect(
         videoAsset: AVAsset,
         durationInMilliseconds: Double,

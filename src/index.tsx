@@ -37,6 +37,8 @@ type TsMediapipeProps = {
   height?: number;
   width?: number;
   poseStarted?: number;
+  drawOverlay?: boolean;
+  modelType?: 'full' | 'lite' | 'heavy';
 };
 
 type MediapipeComponentProps = TsMediapipeProps & {
@@ -82,6 +84,8 @@ const TsMediapipeView: React.FC<MediapipeComponentProps> = (props) => {
     rightLeg = true,
     leftAnkle = true,
     rightAnkle = true,
+    drawOverlay = true,
+    modelType = 'full',
   } = props;
 
   const ref = useRef(null);
@@ -138,6 +142,8 @@ const TsMediapipeView: React.FC<MediapipeComponentProps> = (props) => {
         rightLeg={rightLeg}
         leftAnkle={leftAnkle}
         rightAnkle={rightAnkle}
+        drawOverlay={drawOverlay}
+        modelType={modelType}
         ref={ref}
       />
     </View>
