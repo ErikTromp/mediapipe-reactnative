@@ -23,6 +23,9 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.WritableMap
+import com.facebook.react.bridge.WritableArray
 import com.google.gson.Gson
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.tsmediapipe.CameraFragmentManager
@@ -86,19 +89,26 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
     }
 
   fun completeCameraSetUpWithPose() {
+    // Only proceed if the fragment is still attached and binding is available
+    if (!isAdded || _fragmentCameraBinding == null) {
+      return
+    }
+    
     setUpCamera()
 
     // Create the PoseLandmarkerHelper that will handle the inference
     backgroundExecutor.execute {
-      poseLandmarkerHelper = PoseLandmarkerHelper(
-        context = requireContext(),
-        runningMode = RunningMode.LIVE_STREAM,
-        minPoseDetectionConfidence = viewModel.currentMinPoseDetectionConfidence,
-        minPoseTrackingConfidence = viewModel.currentMinPoseTrackingConfidence,
-        minPosePresenceConfidence = viewModel.currentMinPosePresenceConfidence,
-        currentDelegate = viewModel.currentDelegate,
-        poseLandmarkerHelperListener = this
-      )
+      if (isAdded && _fragmentCameraBinding != null) {
+        poseLandmarkerHelper = PoseLandmarkerHelper(
+          context = requireContext(),
+          runningMode = RunningMode.LIVE_STREAM,
+          minPoseDetectionConfidence = viewModel.currentMinPoseDetectionConfidence,
+          minPoseTrackingConfidence = viewModel.currentMinPoseTrackingConfidence,
+          minPosePresenceConfidence = viewModel.currentMinPosePresenceConfidence,
+          currentDelegate = viewModel.currentDelegate,
+          poseLandmarkerHelperListener = this
+        )
+      }
     }
   }
 
@@ -182,7 +192,10 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
     cameraProviderFuture.addListener(
       {
         cameraProvider = cameraProviderFuture.get()
-        bindCameraUseCases()
+        // Only bind camera use cases if the fragment binding is available
+        if (_fragmentCameraBinding != null) {
+          bindCameraUseCases()
+        }
       }, ContextCompat.getMainExecutor(requireContext())
     )
   }
@@ -265,7 +278,7 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
     resultBundle: PoseLandmarkerHelper.ResultBundle
   ) {
     activity?.runOnUiThread {
-      if (_fragmentCameraBinding != null) {
+      if (_fragmentCameraBinding != null && isAdded) {
 
         val data = resultBundle.results.first()
         val landmarksArray: MutableList<Map<String, Any>> = mutableListOf()
@@ -311,23 +324,60 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
 //          "startTimestamp" to resultBundle.startTimestamp
         )
 
-        val swiftDict: MutableMap<String, Any> = mutableMapOf(
-          "landmarks" to landmarksArray,
-          "additionalData" to additionalData,
-          "worldLandmarks" to worldLandmarksArray
-        )
+        // Convert to React Native WritableMap for proper JavaScript conversion
+        val writableMap: WritableMap = Arguments.createMap()
+        val landmarksWritableArray: WritableArray = Arguments.createArray()
+        val worldLandmarksWritableArray: WritableArray = Arguments.createArray()
+        val additionalDataWritableMap: WritableMap = Arguments.createMap()
+
+        // Convert landmarks array
+        for (landmark in landmarksArray) {
+          val landmarkMap: WritableMap = Arguments.createMap()
+          landmarkMap.putDouble("x", (landmark["x"] as Number).toDouble())
+          landmarkMap.putDouble("y", (landmark["y"] as Number).toDouble())
+          landmarkMap.putDouble("z", (landmark["z"] as Number).toDouble())
+          landmarkMap.putDouble("visibility", (landmark["visibility"] as Number).toDouble())
+          landmarkMap.putDouble("presence", (landmark["presence"] as Number).toDouble())
+          landmarksWritableArray.pushMap(landmarkMap)
+        }
+
+        // Convert world landmarks array
+        for (landmark in worldLandmarksArray) {
+          val landmarkMap: WritableMap = Arguments.createMap()
+          landmarkMap.putDouble("x", (landmark["x"] as Number).toDouble())
+          landmarkMap.putDouble("y", (landmark["y"] as Number).toDouble())
+          landmarkMap.putDouble("z", (landmark["z"] as Number).toDouble())
+          landmarkMap.putDouble("visibility", (landmark["visibility"] as Number).toDouble())
+          landmarkMap.putDouble("presence", (landmark["presence"] as Number).toDouble())
+          worldLandmarksWritableArray.pushMap(landmarkMap)
+        }
+
+        // Convert additional data
+        additionalDataWritableMap.putInt("height", additionalData["height"] as Int)
+        additionalDataWritableMap.putInt("width", additionalData["width"] as Int)
+
+        // Build the final map
+        writableMap.putArray("landmarks", landmarksWritableArray)
+        writableMap.putArray("worldLandmarks", worldLandmarksWritableArray)
+        writableMap.putMap("additionalData", additionalDataWritableMap)
 
         val reactContext = ReactContextProvider.reactApplicationContext
-        reactContext?.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-          ?.emit("onLandmark", swiftDict)
+        if (reactContext != null && reactContext.hasActiveReactInstance()) {
+          reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+            ?.emit("onLandmark", writableMap)
+        }
 
-        fragmentCameraBinding.myOverlay.setResults(
-          resultBundle.results.first(),
-          resultBundle.inputImageHeight,
-          resultBundle.inputImageWidth,
-          RunningMode.LIVE_STREAM
-        )
-        fragmentCameraBinding.myOverlay.invalidate()
+        try {
+          fragmentCameraBinding.myOverlay.setResults(
+            resultBundle.results.first(),
+            resultBundle.inputImageHeight,
+            resultBundle.inputImageWidth,
+            RunningMode.LIVE_STREAM
+          )
+          fragmentCameraBinding.myOverlay.invalidate()
+        } catch (e: Exception) {
+          Log.e("CameraFragment", "Error updating overlay: ${e.message}")
+        }
       }
     }
   }
