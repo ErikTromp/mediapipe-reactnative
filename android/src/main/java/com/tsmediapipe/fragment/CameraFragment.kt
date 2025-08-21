@@ -175,8 +175,8 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
 
-    // Initialize our background executor with multiple threads for better performance
-    backgroundExecutor = Executors.newFixedThreadPool(2)
+    // Initialize our background executor
+    backgroundExecutor = Executors.newSingleThreadExecutor()
 
     if (!hasPermissions(requireContext())) {
       requestPermissionLauncher.launch(
