@@ -2,7 +2,6 @@ package com.tsmediapipe
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Matrix
 import android.os.SystemClock
 import android.util.Log
@@ -28,11 +27,7 @@ class PoseLandmarkerHelper(
   val poseLandmarkerHelperListener: LandmarkerListener? = null
 ) {
 
-  // Reusable Bitmaps to reduce memory allocations
-  private var reusableBitmap: Bitmap? = null
-  private var reusableRotatedBitmap: Bitmap? = null
-  private var lastImageWidth: Int = 0
-  private var lastImageHeight: Int = 0
+
 
   // For this example this needs to be a var so it can be reset on changes.
   // If the Pose Landmarker will not change, a lazy val would be preferable.
@@ -176,9 +171,14 @@ class PoseLandmarkerHelper(
     }
     val frameTime = SystemClock.uptimeMillis()
 
-    // Reuse Bitmaps to reduce memory allocations
-    val bitmapBuffer = getOrCreateBitmap(imageProxy.width, imageProxy.height)
-    
+    // Copy out RGB bits from the frame to a bitmap buffer
+    val bitmapBuffer =
+      Bitmap.createBitmap(
+        imageProxy.width,
+        imageProxy.height,
+        Bitmap.Config.ARGB_8888
+      )
+
     imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
     imageProxy.close()
 
@@ -196,33 +196,22 @@ class PoseLandmarkerHelper(
         )
       }
     }
-    
-    val rotatedBitmap = getOrCreateRotatedBitmap(imageProxy.width, imageProxy.height)
-    val canvas = Canvas(rotatedBitmap)
-    canvas.drawBitmap(bitmapBuffer, matrix, null)
+
+    val rotatedBitmap =
+      Bitmap.createBitmap(
+        bitmapBuffer,
+        0,
+        0,
+        bitmapBuffer.width,
+        bitmapBuffer.height,
+        matrix,
+        true
+      )
 
     // Convert the input Bitmap object to an MPImage object to run inference
     val mpImage = BitmapImageBuilder(rotatedBitmap).build()
 
     detectAsync(mpImage, frameTime)
-  }
-
-  private fun getOrCreateBitmap(width: Int, height: Int): Bitmap {
-    if (reusableBitmap == null || lastImageWidth != width || lastImageHeight != height) {
-      reusableBitmap?.recycle()
-      reusableBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-      lastImageWidth = width
-      lastImageHeight = height
-    }
-    return reusableBitmap!!
-  }
-
-  private fun getOrCreateRotatedBitmap(width: Int, height: Int): Bitmap {
-    if (reusableRotatedBitmap == null || lastImageWidth != width || lastImageHeight != height) {
-      reusableRotatedBitmap?.recycle()
-      reusableRotatedBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    }
-    return reusableRotatedBitmap!!
   }
 
   // Run pose landmark using MediaPipe Pose Landmarker API

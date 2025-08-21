@@ -29,6 +29,7 @@ import com.facebook.react.bridge.WritableArray
 import com.google.gson.Gson
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.tsmediapipe.CameraFragmentManager
+import com.tsmediapipe.GlobalState
 import com.tsmediapipe.MainViewModel
 import com.tsmediapipe.PoseLandmarkerHelper
 import com.tsmediapipe.ReactContextProvider
@@ -217,7 +218,6 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
         .setTargetRotation(fragmentCameraBinding.viewFinder.display.rotation)
         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
         .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-        .setTargetFrameRate(Range(15, 30))
         .build()
         .also {
           it.setAnalyzer(backgroundExecutor) { image ->
