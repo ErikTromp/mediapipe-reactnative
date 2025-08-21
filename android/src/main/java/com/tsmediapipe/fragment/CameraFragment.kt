@@ -174,8 +174,8 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
 
-    // Initialize our background executor
-    backgroundExecutor = Executors.newSingleThreadExecutor()
+    // Initialize our background executor with multiple threads for better performance
+    backgroundExecutor = Executors.newFixedThreadPool(2)
 
     if (!hasPermissions(requireContext())) {
       requestPermissionLauncher.launch(
@@ -217,6 +217,7 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
         .setTargetRotation(fragmentCameraBinding.viewFinder.display.rotation)
         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
         .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+        .setTargetFrameRate(Range(15, 30))
         .build()
         .also {
           it.setAnalyzer(backgroundExecutor) { image ->
@@ -277,7 +278,8 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
   override fun onResults(
     resultBundle: PoseLandmarkerHelper.ResultBundle
   ) {
-    activity?.runOnUiThread {
+    // Process results on background thread to avoid blocking UI
+    backgroundExecutor.execute {
       if (_fragmentCameraBinding != null && isAdded) {
 
         val data = resultBundle.results.first()
@@ -367,16 +369,21 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
             ?.emit("onLandmark", writableMap)
         }
 
-        try {
-          fragmentCameraBinding.myOverlay.setResults(
-            resultBundle.results.first(),
-            resultBundle.inputImageHeight,
-            resultBundle.inputImageWidth,
-            RunningMode.LIVE_STREAM
-          )
-          fragmentCameraBinding.myOverlay.invalidate()
-        } catch (e: Exception) {
-          Log.e("CameraFragment", "Error updating overlay: ${e.message}")
+        // Only update overlay if drawOverlay is enabled
+        if (GlobalState.isDrawOverlayEnabled) {
+          activity?.runOnUiThread {
+            try {
+              fragmentCameraBinding.myOverlay.setResults(
+                resultBundle.results.first(),
+                resultBundle.inputImageHeight,
+                resultBundle.inputImageWidth,
+                RunningMode.LIVE_STREAM
+              )
+              fragmentCameraBinding.myOverlay.invalidate()
+            } catch (e: Exception) {
+              Log.e("CameraFragment", "Error updating overlay: ${e.message}")
+            }
+          }
         }
       }
     }

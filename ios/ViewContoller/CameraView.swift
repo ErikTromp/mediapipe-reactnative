@@ -19,7 +19,6 @@ class CameraView: UIView {
     
     var heightInfo: CGFloat = 0
     var widthInfo: CGFloat = 0
-    var frameCount:Int = 0
     var landmarkData: LandmarkData!
     var isPortrait: Bool = true
     var poseStart: Bool = true
@@ -440,15 +439,12 @@ extension CameraView: PoseLandmarkerServiceLiveStreamDelegate {
                 guard let weakSelf = self else { return }
                 //   weakSelf.inferenceResultDeliveryDelegate?.didPerformInference(result: result)
                 guard let poseLandmarkerResult = result?.poseLandmarkerResults.first as? PoseLandmarkerResult else { return }
-                let limit = ((self?.landmarkData.frameRate)!)/6
                 
-                self!.frameCount =  self!.frameCount+1;
-                if(self!.frameCount > Int(limit)){
-                    self!.frameCount = 0
-                    var results = poseLandmarkerResult.landmarks.first
-                    var worldLandmarks = poseLandmarkerResult.worldLandmarks.first
-                    
-                    var swiftDict: [String: Any] = [:]
+                // Remove artificial frame rate limiting - send all results
+                var results = poseLandmarkerResult.landmarks.first
+                var worldLandmarks = poseLandmarkerResult.worldLandmarks.first
+                
+                var swiftDict: [String: Any] = [:]
                     
                     if let landmarks = results {
                         var landmarksArray: [[String: Any]] = []
@@ -512,7 +508,8 @@ extension CameraView: PoseLandmarkerServiceLiveStreamDelegate {
                     }
                 }
                 
-                if self!.previewView != nil{
+                // Only render overlay if drawOverlay is enabled
+                if self!.previewView != nil && self!.drawOverlay {
                     let orientaiton =  self!.isPortrait ? UIDevice.current.orientation : UIDeviceOrientation(rawValue: 3)
                     let imageSize = weakSelf.cameraFeedService.videoResolution
                     let poseOverlays = OverlayView().poseOverlays(

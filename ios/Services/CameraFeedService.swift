@@ -372,7 +372,7 @@ class CameraFeedService: NSObject {
             if let connection = videoDataOutput.connection(with: .video) {
                 let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: cameraPosition)
                 
-                self.configureFrameRate(for: videoDevice!, frameRate: 25)
+                self.configureFrameRate(for: videoDevice!, frameRate: 30)
                 
                 connection.videoOrientation = isPortrait ? .portrait : .landscapeRight
                 
