@@ -18,6 +18,7 @@ public class GlobalState {
   public static int inputResolution = 640;
   public static int detectionFrequency = 10; // milliseconds
   public static int delegate = 0; // 0 = CPU, 1 = GPU
+  public static int cameraFrameRate = 15; // FPS
 
   public static String orientation = "portrait";
 }

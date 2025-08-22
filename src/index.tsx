@@ -42,6 +42,7 @@ type TsMediapipeProps = {
   inputResolution?: number;
   detectionFrequency?: number;
   delegate?: number;
+  cameraFrameRate?: number;
 };
 
 type MediapipeComponentProps = TsMediapipeProps & {
@@ -92,6 +93,7 @@ const TsMediapipeView: React.FC<MediapipeComponentProps> = (props) => {
     inputResolution = 640,
     detectionFrequency = 10,
     delegate = 0,
+    cameraFrameRate = 15,
   } = props;
 
   const ref = useRef(null);
@@ -153,6 +155,7 @@ const TsMediapipeView: React.FC<MediapipeComponentProps> = (props) => {
         inputResolution={inputResolution}
         detectionFrequency={detectionFrequency}
         delegate={delegate}
+        cameraFrameRate={cameraFrameRate}
         ref={ref}
       />
     </View>

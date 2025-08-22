@@ -223,6 +223,14 @@ class CameraFeedService: NSObject {
         self.isPortrait = isPortrait
     }
     
+    func updateFrameRate(_ frameRate: Int) {
+        sessionQueue.async {
+            if let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: self.cameraPosition) {
+                self.configureFrameRate(for: videoDevice, frameRate: frameRate)
+            }
+        }
+    }
+    
     func poseStarted(started: Bool) {
         self.isPoseStarted = started
     }
@@ -372,7 +380,7 @@ class CameraFeedService: NSObject {
             if let connection = videoDataOutput.connection(with: .video) {
                 let videoDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: cameraPosition)
                 
-                self.configureFrameRate(for: videoDevice!, frameRate: 30)
+                self.configureFrameRate(for: videoDevice!, frameRate: 15)
                 
                 connection.videoOrientation = isPortrait ? .portrait : .landscapeRight
                 

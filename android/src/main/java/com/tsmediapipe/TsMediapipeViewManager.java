@@ -309,11 +309,17 @@ public class TsMediapipeViewManager extends ViewGroupManager<FrameLayout> {
 
   @ReactProp(name = "delegate")
   public void setDelegateProp(View view, Integer delegate) {
-    if (delegate != null && (delegate == 0 || delegate == 1)) {
-      GlobalState.delegate = delegate;
-      if (currentFragment != null) {
-        currentFragment.updateDelegate(delegate);
-      }
+    GlobalState.delegate = delegate != null ? delegate : 0;
+    if (currentFragment != null) {
+      currentFragment.updateDelegate(GlobalState.delegate);
+    }
+  }
+
+  @ReactProp(name = "cameraFrameRate")
+  public void setCameraFrameRateProp(View view, Integer frameRate) {
+    GlobalState.cameraFrameRate = frameRate != null ? frameRate : 15;
+    if (currentFragment != null) {
+      currentFragment.updateCameraFrameRate(GlobalState.cameraFrameRate);
     }
   }
 

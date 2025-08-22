@@ -200,9 +200,41 @@ class PoseLandmarkerService: NSObject {
     private func resizeImageIfNeeded(_ image: MPImage) -> MPImage {
         // Only resize if the image is larger than target resolution
         if image.width > inputResolution || image.height > inputResolution {
-            // For now, return original image - resize implementation would go here
-            // In a full implementation, you'd resize the MPImage to inputResolution x inputResolution
-            return image
+            // Calculate new dimensions maintaining aspect ratio
+            let aspectRatio = Double(image.width) / Double(image.height)
+            let newWidth: Int
+            let newHeight: Int
+            
+            if aspectRatio > 1.0 {
+                // Landscape
+                newWidth = inputResolution
+                newHeight = Int(Double(inputResolution) / aspectRatio)
+            } else {
+                // Portrait
+                newHeight = inputResolution
+                newWidth = Int(Double(inputResolution) * aspectRatio)
+            }
+            
+            // Create a new MPImage with the target size
+            // Note: This is a simplified approach - in production you might want to use Core Image filters
+            // for better quality and performance
+            if let cgImage = image.cgImage {
+                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                let context = CGContext(data: nil,
+                                      width: newWidth,
+                                      height: newHeight,
+                                      bitsPerComponent: 8,
+                                      bytesPerRow: newWidth * 4,
+                                      space: colorSpace,
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+                
+                context?.interpolationQuality = .medium
+                context?.draw(cgImage, in: CGRect(x: 0, y: 0, width: newWidth, height: newHeight))
+                
+                if let resizedCGImage = context?.makeImage() {
+                    return MPImage(cgImage: resizedCGImage)
+                }
+            }
         }
         return image
     }

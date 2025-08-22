@@ -295,6 +295,13 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
     }
   }
 
+  fun updateCameraFrameRate(frameRate: Int) {
+    // Update camera frame rate if needed
+    // This would require updating the ImageAnalysis configuration
+    // For now, we'll just log it
+    Log.d("CameraFragment", "Camera frame rate updated to: $frameRate")
+  }
+
   override fun onConfigurationChanged(newConfig: Configuration) {
     super.onConfigurationChanged(newConfig)
     imageAnalyzer?.targetRotation =

@@ -149,6 +149,12 @@ class CameraView: UIView {
         }
     }
     
+    @objc var cameraFrameRate: NSNumber = 15 {
+        didSet {
+            cameraFeedService.updateFrameRate(Int(truncating: cameraFrameRate))
+        }
+    }
+    
     
     @objc var orientation: NSNumber = 0 {
         didSet {
@@ -456,9 +462,9 @@ extension CameraView: PoseLandmarkerServiceLiveStreamDelegate {
         didFinishDetection result: ResultBundle?,
         error: Error?) {
             
-            DispatchQueue.main.async { [weak self] in
+            // Process results on background queue to avoid blocking UI
+            backgroundQueue.async { [weak self] in
                 guard let weakSelf = self else { return }
-                //   weakSelf.inferenceResultDeliveryDelegate?.didPerformInference(result: result)
                 guard let poseLandmarkerResult = result?.poseLandmarkerResults.first as? PoseLandmarkerResult else { return }
                 
                 // Remove artificial frame rate limiting - send all results
@@ -500,52 +506,46 @@ extension CameraView: PoseLandmarkerServiceLiveStreamDelegate {
                             }
                         }
                         
-                        
-                        //              var pixelBufferFromSampleBuffe = CMSampleBufferGetImageBuffer(self!.sampleBuffer)
-                        //              var uiImage = uiImageFromPixelBuffer(pixelBufferFromSampleBuffe!)
-                        //              var  dataFromUIImage =  dataFromUIImage(uiImage!)
-                        //   var base64StringFromData = base64StringFromData(dataFromUIImage!)
-                        
-                        // Add the landmarks array to the swiftDict
-                        
-                        
                         swiftDict["landmarks"] = landmarksArray
                         swiftDict["additionalData"] = [
-                            "height": self?.landmarkData.height ?? CGFloat(self!.isPortrait ? DefaultConstants.HEIGHT : DefaultConstants.WIDTH) ,
-                            "width": self?.landmarkData.width ?? CGFloat(self!.isPortrait ? DefaultConstants.WIDTH : DefaultConstants.HEIGHT),
-                            "presentationTimeStamp": self?.landmarkData.presentationTimeStamp ?? 0,
-                            "frameNumber": self?.landmarkData.frameNumber ?? 0,
-                            "startTimestamp" : self?.landmarkData.startTimestamp
+                            "height": weakSelf.landmarkData.height ?? CGFloat(weakSelf.isPortrait ? DefaultConstants.HEIGHT : DefaultConstants.WIDTH) ,
+                            "width": weakSelf.landmarkData.width ?? CGFloat(weakSelf.isPortrait ? DefaultConstants.WIDTH : DefaultConstants.HEIGHT),
+                            "presentationTimeStamp": weakSelf.landmarkData.presentationTimeStamp ?? 0,
+                            "frameNumber": weakSelf.landmarkData.frameNumber ?? 0,
+                            "startTimestamp" : weakSelf.landmarkData.startTimestamp
                         ]
                         
                         swiftDict["worldLandmarks"] = worldLandmarksArray
                         
-                        if self!.onLandmark != nil {
-                            self!.onLandmark!(swiftDict)
+                        // Send results on main thread
+                        DispatchQueue.main.async {
+                            if weakSelf.onLandmark != nil {
+                                weakSelf.onLandmark!(swiftDict)
+                            }
                         }
-                    } else {
-                        // Handle the case where `results` is nil
-                        //                print("No landmarks found")
                     }
-                }
                 
-                // Only render overlay if drawOverlay is enabled
-                if self!.previewView != nil && self!.drawOverlay {
-                    let orientaiton =  self!.isPortrait ? UIDevice.current.orientation : UIDeviceOrientation(rawValue: 3)
-                    let imageSize = weakSelf.cameraFeedService.videoResolution
-                    let poseOverlays = OverlayView().poseOverlays(
-                        fromMultiplePoseLandmarks: poseLandmarkerResult.landmarks,
-                        inferredOnImageOfSize: imageSize,
-                        ovelayViewSize: weakSelf.overlayView.bounds.size,
-                        imageContentMode: weakSelf.overlayView.imageContentMode,
-                        andOrientation: UIImage.Orientation.from(
-                            deviceOrientation:  UIDevice.current.orientation ), isPortrait: self!.isPortrait, propDictionary: self!.propDictionary!)
-                    weakSelf.overlayView.clear()
-                    weakSelf.overlayView.shouldDrawOverlay = self!.drawOverlay
-                    weakSelf.overlayView.draw(poseOverlays: poseOverlays,
-                                              inBoundsOfContentImageOfSize: imageSize,
-                                              imageContentMode: weakSelf.cameraFeedService.videoGravity.contentMode,
-                                              isPortrait: self!.isPortrait)
+                // Only render overlay if drawOverlay is enabled - do this on main thread
+                if weakSelf.drawOverlay {
+                    DispatchQueue.main.async {
+                        if weakSelf.previewView != nil {
+                            let orientaiton =  weakSelf.isPortrait ? UIDevice.current.orientation : UIDeviceOrientation(rawValue: 3)
+                            let imageSize = weakSelf.cameraFeedService.videoResolution
+                            let poseOverlays = OverlayView().poseOverlays(
+                                fromMultiplePoseLandmarks: poseLandmarkerResult.landmarks,
+                                inferredOnImageOfSize: imageSize,
+                                ovelayViewSize: weakSelf.overlayView.bounds.size,
+                                imageContentMode: weakSelf.overlayView.imageContentMode,
+                                andOrientation: UIImage.Orientation.from(
+                                    deviceOrientation:  UIDevice.current.orientation ), isPortrait: weakSelf.isPortrait, propDictionary: weakSelf.propDictionary!)
+                            weakSelf.overlayView.clear()
+                            weakSelf.overlayView.shouldDrawOverlay = weakSelf.drawOverlay
+                            weakSelf.overlayView.draw(poseOverlays: poseOverlays,
+                                                      inBoundsOfContentImageOfSize: imageSize,
+                                                      imageContentMode: weakSelf.cameraFeedService.videoGravity.contentMode,
+                                                      isPortrait: weakSelf.isPortrait)
+                        }
+                    }
                 }
             }
         }
