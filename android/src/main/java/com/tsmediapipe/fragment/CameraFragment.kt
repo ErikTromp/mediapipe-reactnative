@@ -100,15 +100,17 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
     // Create the PoseLandmarkerHelper that will handle the inference
     backgroundExecutor.execute {
       if (isAdded && _fragmentCameraBinding != null) {
-        poseLandmarkerHelper = PoseLandmarkerHelper(
-          context = requireContext(),
-          runningMode = RunningMode.LIVE_STREAM,
-          minPoseDetectionConfidence = viewModel.currentMinPoseDetectionConfidence,
-          minPoseTrackingConfidence = viewModel.currentMinPoseTrackingConfidence,
-          minPosePresenceConfidence = viewModel.currentMinPosePresenceConfidence,
-          currentDelegate = viewModel.currentDelegate,
-          poseLandmarkerHelperListener = this
-        )
+                 poseLandmarkerHelper = PoseLandmarkerHelper(
+           context = requireContext(),
+           runningMode = RunningMode.LIVE_STREAM,
+           minPoseDetectionConfidence = viewModel.currentMinPoseDetectionConfidence,
+           minPoseTrackingConfidence = viewModel.currentMinPoseTrackingConfidence,
+           minPosePresenceConfidence = viewModel.currentMinPosePresenceConfidence,
+           currentDelegate = GlobalState.delegate,
+           inputResolution = GlobalState.inputResolution,
+           detectionFrequency = GlobalState.detectionFrequency,
+           poseLandmarkerHelperListener = this
+         )
       }
     }
   }
@@ -265,6 +267,30 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
     if (this::poseLandmarkerHelper.isInitialized) {
       backgroundExecutor.execute {
         poseLandmarkerHelper.updateModelType(modelType)
+      }
+    }
+  }
+
+  fun updateInputResolution(resolution: Int) {
+    if (this::poseLandmarkerHelper.isInitialized) {
+      backgroundExecutor.execute {
+        poseLandmarkerHelper.updateInputResolution(resolution)
+      }
+    }
+  }
+
+  fun updateDetectionFrequency(frequencyMs: Int) {
+    if (this::poseLandmarkerHelper.isInitialized) {
+      backgroundExecutor.execute {
+        poseLandmarkerHelper.updateDetectionFrequency(frequencyMs)
+      }
+    }
+  }
+
+  fun updateDelegate(delegate: Int) {
+    if (this::poseLandmarkerHelper.isInitialized) {
+      backgroundExecutor.execute {
+        poseLandmarkerHelper.updateDelegate(delegate)
       }
     }
   }

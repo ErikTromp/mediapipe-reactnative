@@ -2,7 +2,9 @@ package com.tsmediapipe
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Matrix
+import android.graphics.RectF
 import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.VisibleForTesting
@@ -22,12 +24,22 @@ class PoseLandmarkerHelper(
   var currentModel: Int = MODEL_POSE_LANDMARKER_FULL,
   var currentDelegate: Int = DELEGATE_CPU,
   var runningMode: RunningMode = RunningMode.LIVE_STREAM,
+  var inputResolution: Int = DEFAULT_INPUT_RESOLUTION,
+  var detectionFrequency: Int = DEFAULT_DETECTION_FREQUENCY,
   val context: Context,
   // this listener is only used when running in RunningMode.LIVE_STREAM
   val poseLandmarkerHelperListener: LandmarkerListener? = null
 ) {
 
+  // Performance tracking
+  private var frameCount: Int = 0
+  private var lastDetectionTime: Long = 0
+  private var detectionInterval: Long = 0
 
+  // Reusable Bitmap for performance
+  private var resizedBitmap: Bitmap? = null
+  private var lastInputWidth: Int = 0
+  private var lastInputHeight: Int = 0
 
   // For this example this needs to be a var so it can be reset on changes.
   // If the Pose Landmarker will not change, a lazy val would be preferable.
@@ -68,6 +80,25 @@ class PoseLandmarkerHelper(
       currentModel = MODEL_POSE_LANDMARKER_FULL
       setupPoseLandmarker()
     }
+  }
+
+  fun updateInputResolution(resolution: Int) {
+    inputResolution = resolution
+    // Clear cached bitmap when resolution changes
+    resizedBitmap?.recycle()
+    resizedBitmap = null
+    lastInputWidth = 0
+    lastInputHeight = 0
+  }
+
+  fun updateDetectionFrequency(frequencyMs: Int) {
+    detectionFrequency = frequencyMs
+    detectionInterval = frequencyMs.toLong()
+  }
+
+  fun updateDelegate(delegate: Int) {
+    currentDelegate = delegate
+    setupPoseLandmarker()
   }
 
   // Return running status of PoseLandmarkerHelper
@@ -169,7 +200,17 @@ class PoseLandmarkerHelper(
           " while not using RunningMode.LIVE_STREAM"
       )
     }
-    val frameTime = SystemClock.uptimeMillis()
+    
+    val currentTime = SystemClock.uptimeMillis()
+    
+    // Check detection frequency - skip frames if too frequent
+    if (detectionInterval > 0 && currentTime - lastDetectionTime < detectionInterval) {
+      imageProxy.close()
+      return
+    }
+    
+    frameCount++
+    lastDetectionTime = currentTime
 
     // Copy out RGB bits from the frame to a bitmap buffer
     val bitmapBuffer =
@@ -208,10 +249,37 @@ class PoseLandmarkerHelper(
         true
       )
 
-    // Convert the input Bitmap object to an MPImage object to run inference
-    val mpImage = BitmapImageBuilder(rotatedBitmap).build()
+    // Resize bitmap to target resolution for better performance
+    val resizedBitmap = resizeBitmap(rotatedBitmap, inputResolution)
+    
+    // Clean up original bitmaps
+    bitmapBuffer.recycle()
+    rotatedBitmap.recycle()
 
-    detectAsync(mpImage, frameTime)
+    // Convert the input Bitmap object to an MPImage object to run inference
+    val mpImage = BitmapImageBuilder(resizedBitmap).build()
+
+    detectAsync(mpImage, currentTime)
+  }
+
+  private fun resizeBitmap(bitmap: Bitmap, targetSize: Int): Bitmap {
+    // Reuse bitmap if size hasn't changed
+    if (resizedBitmap != null && 
+        lastInputWidth == targetSize && 
+        lastInputHeight == targetSize) {
+      // Copy new data to existing bitmap
+      val canvas = android.graphics.Canvas(resizedBitmap!!)
+      canvas.drawBitmap(bitmap, null, android.graphics.RectF(0f, 0f, targetSize.toFloat(), targetSize.toFloat()), null)
+      return resizedBitmap!!
+    }
+    
+    // Create new resized bitmap
+    resizedBitmap?.recycle()
+    resizedBitmap = Bitmap.createScaledBitmap(bitmap, targetSize, targetSize, true)
+    lastInputWidth = targetSize
+    lastInputHeight = targetSize
+    
+    return resizedBitmap!!
   }
 
   // Run pose landmark using MediaPipe Pose Landmarker API
@@ -262,6 +330,8 @@ class PoseLandmarkerHelper(
     const val MODEL_POSE_LANDMARKER_FULL = 0
     const val MODEL_POSE_LANDMARKER_LITE = 1
     const val MODEL_POSE_LANDMARKER_HEAVY = 2
+    const val DEFAULT_INPUT_RESOLUTION = 640 // Default input resolution
+    const val DEFAULT_DETECTION_FREQUENCY = 10 // Default detection frequency (ms)
   }
 
   data class ResultBundle(

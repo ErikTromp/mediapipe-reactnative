@@ -39,6 +39,9 @@ type TsMediapipeProps = {
   poseStarted?: number;
   drawOverlay?: boolean;
   modelType?: 'full' | 'lite' | 'heavy';
+  inputResolution?: number;
+  detectionFrequency?: number;
+  delegate?: number;
 };
 
 type MediapipeComponentProps = TsMediapipeProps & {
@@ -86,6 +89,9 @@ const TsMediapipeView: React.FC<MediapipeComponentProps> = (props) => {
     rightAnkle = true,
     drawOverlay = true,
     modelType = 'full',
+    inputResolution = 640,
+    detectionFrequency = 10,
+    delegate = 0,
   } = props;
 
   const ref = useRef(null);
@@ -144,6 +150,9 @@ const TsMediapipeView: React.FC<MediapipeComponentProps> = (props) => {
         rightAnkle={rightAnkle}
         drawOverlay={drawOverlay}
         modelType={modelType}
+        inputResolution={inputResolution}
+        detectionFrequency={detectionFrequency}
+        delegate={delegate}
         ref={ref}
       />
     </View>

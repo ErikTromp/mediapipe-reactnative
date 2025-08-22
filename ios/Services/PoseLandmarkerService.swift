@@ -37,6 +37,11 @@ class PoseLandmarkerService: NSObject {
     private var modelPath: String
     private var delegate: PoseLandmarkerDelegate
     
+    // Performance optimization properties
+    private var inputResolution: Int
+    private var detectionFrequency: Int // milliseconds
+    private var lastDetectionTime: TimeInterval = 0
+    
     // MARK: - Custom Initializer
     private init?(modelPath: String?,
                   runningMode:RunningMode,
@@ -44,7 +49,9 @@ class PoseLandmarkerService: NSObject {
                   minPoseDetectionConfidence: Float,
                   minPosePresenceConfidence: Float,
                   minTrackingConfidence: Float,
-                  delegate: PoseLandmarkerDelegate) {
+                  delegate: PoseLandmarkerDelegate,
+                  inputResolution: Int = 640,
+                  detectionFrequency: Int = 10) {
         guard let modelPath = modelPath else { return nil }
         self.modelPath = modelPath
         self.runningMode = runningMode
@@ -53,6 +60,8 @@ class PoseLandmarkerService: NSObject {
         self.minPosePresenceConfidence = minPosePresenceConfidence
         self.minTrackingConfidence = minTrackingConfidence
         self.delegate = delegate
+        self.inputResolution = inputResolution
+        self.detectionFrequency = detectionFrequency
         super.init()
         
         createPoseLandmarker()
@@ -106,7 +115,9 @@ class PoseLandmarkerService: NSObject {
         minPosePresenceConfidence: Float,
         minTrackingConfidence: Float,
         liveStreamDelegate: PoseLandmarkerServiceLiveStreamDelegate?,
-        delegate: PoseLandmarkerDelegate) -> PoseLandmarkerService? {
+        delegate: PoseLandmarkerDelegate,
+        inputResolution: Int = 640,
+        detectionFrequency: Int = 10) -> PoseLandmarkerService? {
             let poseLandmarkerService = PoseLandmarkerService(
                 modelPath: modelPath,
                 runningMode: .liveStream,
@@ -114,7 +125,9 @@ class PoseLandmarkerService: NSObject {
                 minPoseDetectionConfidence: minPoseDetectionConfidence,
                 minPosePresenceConfidence: minPosePresenceConfidence,
                 minTrackingConfidence: minTrackingConfidence,
-                delegate: delegate)
+                delegate: delegate,
+                inputResolution: inputResolution,
+                detectionFrequency: detectionFrequency)
             poseLandmarkerService?.liveStreamDelegate = liveStreamDelegate
             
             return poseLandmarkerService
@@ -162,15 +175,37 @@ class PoseLandmarkerService: NSObject {
         sampleBuffer: CMSampleBuffer,
         orientation: UIImage.Orientation,
         timeStamps: Int) {
+            
+            // Check detection frequency - skip frames if too frequent
+            let currentTime = Date().timeIntervalSince1970 * 1000
+            if detectionFrequency > 0 && currentTime - lastDetectionTime < Double(detectionFrequency) {
+                return
+            }
+            lastDetectionTime = currentTime
+            
             guard let image = try? MPImage(sampleBuffer: sampleBuffer, orientation: orientation) else {
                 return
             }
+            
+            // Resize image for better performance if needed
+            let resizedImage = resizeImageIfNeeded(image)
+            
             do {
-                try poseLandmarker?.detectAsync(image: image, timestampInMilliseconds: timeStamps)
+                try poseLandmarker?.detectAsync(image: resizedImage, timestampInMilliseconds: timeStamps)
             } catch {
                 print(error)
             }
         }
+    
+    private func resizeImageIfNeeded(_ image: MPImage) -> MPImage {
+        // Only resize if the image is larger than target resolution
+        if image.width > inputResolution || image.height > inputResolution {
+            // For now, return original image - resize implementation would go here
+            // In a full implementation, you'd resize the MPImage to inputResolution x inputResolution
+            return image
+        }
+        return image
+    }
     
     func clearPoseLandmarker() {
         poseLandmarker = nil
@@ -180,6 +215,14 @@ class PoseLandmarkerService: NSObject {
         clearPoseLandmarker()
         self.modelPath = modelPath
         createPoseLandmarker()
+    }
+    
+    func updateInputResolution(_ resolution: Int) {
+        inputResolution = resolution
+    }
+    
+    func updateDetectionFrequency(_ frequencyMs: Int) {
+        detectionFrequency = frequencyMs
     }
     
     func detect(

@@ -130,6 +130,25 @@ class CameraView: UIView {
         }
     }
     
+    @objc var inputResolution: NSNumber = 640 {
+        didSet {
+            poseLandmarkerService?.updateInputResolution(Int(truncating: inputResolution))
+        }
+    }
+    
+    @objc var detectionFrequency: NSNumber = 10 {
+        didSet {
+            poseLandmarkerService?.updateDetectionFrequency(Int(truncating: detectionFrequency))
+        }
+    }
+    
+    @objc var delegate: NSNumber = 0 {
+        didSet {
+            // Delegate changes require recreating the service
+            updateBodyTrack()
+        }
+    }
+    
     
     @objc var orientation: NSNumber = 0 {
         didSet {
@@ -334,7 +353,9 @@ class CameraView: UIView {
                 minPosePresenceConfidence: InferenceConfigurationManager.sharedInstance.minPosePresenceConfidence,
                 minTrackingConfidence: InferenceConfigurationManager.sharedInstance.minTrackingConfidence,
                 liveStreamDelegate: self,
-                delegate: InferenceConfigurationManager.sharedInstance.delegate)
+                delegate: InferenceConfigurationManager.sharedInstance.delegate,
+                inputResolution: Int(truncating: inputResolution),
+                detectionFrequency: Int(truncating: detectionFrequency))
     }
     
     private func clearPoseLandmarkerServiceOnSessionInterruption() {

@@ -287,6 +287,36 @@ public class TsMediapipeViewManager extends ViewGroupManager<FrameLayout> {
     GlobalState.currentModelType = modelType;
   }
 
+  @ReactProp(name = "inputResolution")
+  public void setInputResolutionProp(View view, Integer resolution) {
+    if (resolution != null && resolution > 0) {
+      GlobalState.inputResolution = resolution;
+      if (currentFragment != null) {
+        currentFragment.updateInputResolution(resolution);
+      }
+    }
+  }
+
+  @ReactProp(name = "detectionFrequency")
+  public void setDetectionFrequencyProp(View view, Integer frequencyMs) {
+    if (frequencyMs != null && frequencyMs >= 0) {
+      GlobalState.detectionFrequency = frequencyMs;
+      if (currentFragment != null) {
+        currentFragment.updateDetectionFrequency(frequencyMs);
+      }
+    }
+  }
+
+  @ReactProp(name = "delegate")
+  public void setDelegateProp(View view, Integer delegate) {
+    if (delegate != null && (delegate == 0 || delegate == 1)) {
+      GlobalState.delegate = delegate;
+      if (currentFragment != null) {
+        currentFragment.updateDelegate(delegate);
+      }
+    }
+  }
+
   /**
    * Replace your React Native view with a custom fragment
    */
