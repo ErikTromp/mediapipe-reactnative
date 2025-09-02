@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.SystemClock
 import android.util.Log
+import android.util.Base64
 import androidx.annotation.VisibleForTesting
 import androidx.camera.core.ImageProxy
 import com.google.mediapipe.framework.image.BitmapImageBuilder
@@ -14,6 +15,8 @@ import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
+import java.io.ByteArrayOutputStream
+import java.util.concurrent.ConcurrentHashMap
 
 class PoseLandmarkerHelper(
   var minPoseDetectionConfidence: Float = DEFAULT_POSE_DETECTION_CONFIDENCE,
@@ -30,6 +33,7 @@ class PoseLandmarkerHelper(
   // For this example this needs to be a var so it can be reset on changes.
   // If the Pose Landmarker will not change, a lazy val would be preferable.
   private var poseLandmarker: PoseLandmarker? = null
+  private val frameBase64ByTimestamp: ConcurrentHashMap<Long, String> = ConcurrentHashMap()
 
   init {
     setupPoseLandmarker()
@@ -174,6 +178,15 @@ class PoseLandmarkerHelper(
     // Convert the input Bitmap object to an MPImage object to run inference
     val mpImage = BitmapImageBuilder(rotatedBitmap).build()
 
+    // Encode current frame bitmap to Base64 (JPEG) and store by timestamp for retrieval on callback
+    runCatching {
+      val byteArrayOutputStream = ByteArrayOutputStream()
+      rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, byteArrayOutputStream)
+      val bytes = byteArrayOutputStream.toByteArray()
+      val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+      frameBase64ByTimestamp[frameTime] = base64
+    }
+
     detectAsync(mpImage, frameTime)
   }
 
@@ -192,13 +205,15 @@ class PoseLandmarkerHelper(
   ) {
     val finishTimeMs = SystemClock.uptimeMillis()
     val inferenceTime = finishTimeMs - result.timestampMs()
+    val frameBase64 = frameBase64ByTimestamp.remove(result.timestampMs())
 
     poseLandmarkerHelperListener?.onResults(
       ResultBundle(
         listOf(result),
         inferenceTime,
         input.height,
-        input.width
+        input.width,
+        frameBase64
       )
     )
   }
@@ -232,6 +247,7 @@ class PoseLandmarkerHelper(
     val inferenceTime: Long,
     val inputImageHeight: Int,
     val inputImageWidth: Int,
+    val frameBase64: String? = null,
   )
 
   interface LandmarkerListener {

@@ -309,6 +309,9 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
           "worldLandmarks" to worldLandmarksArray
         )
 
+        resultBundle.frameBase64?.let {
+          swiftDict["frameBase64"] = it
+        }
 
         val gson = Gson()
         val jsonData = gson.toJson(swiftDict)

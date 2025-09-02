@@ -23,6 +23,7 @@ class CameraView: UIView {
     var landmarkData: LandmarkData!
     var isPortrait: Bool = true
     var poseStart: Bool = true
+    var latestSampleBuffer: CMSampleBuffer?
     
     private var isSessionRunning = false
     private var isObserving = false
@@ -349,7 +350,7 @@ extension CameraView: CameraFeedServiceDelegate {
                 timeStamps: Int(currentTimeMs))
         }
         self.landmarkData = landmarkData
-        //   self.sampleBuffer = sampleBuffer
+        self.latestSampleBuffer = sampleBuffer
     }
     
     // MARK: Session Handling Alerts
@@ -474,6 +475,17 @@ extension CameraView: PoseLandmarkerServiceLiveStreamDelegate {
                         ]
                         
                         swiftDict["worldLandmarks"] = worldLandmarksArray
+
+                        // Attach base64-encoded current frame if available
+                        if let sampleBuffer = self?.latestSampleBuffer,
+                           let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+                            let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+                            if let uiImage = UIImage(ciImage: ciImage),
+                               let jpegData = uiImage.jpegData(compressionQuality: 0.7) {
+                                let base64String = jpegData.base64EncodedString()
+                                swiftDict["frameBase64"] = base64String
+                            }
+                        }
                         
                         if self!.onLandmark != nil {
                             self!.onLandmark!(swiftDict)
