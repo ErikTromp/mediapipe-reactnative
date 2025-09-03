@@ -34,6 +34,9 @@ class PoseLandmarkerHelper(
   // If the Pose Landmarker will not change, a lazy val would be preferable.
   private var poseLandmarker: PoseLandmarker? = null
   private val frameBase64ByTimestamp: ConcurrentHashMap<Long, String> = ConcurrentHashMap()
+  private val frameNumberByTimestamp: ConcurrentHashMap<Long, Long> = ConcurrentHashMap()
+  private var startTimestampMs: Long? = null
+  private var frameCounter: Long = 0
 
   init {
     setupPoseLandmarker()
@@ -143,7 +146,8 @@ class PoseLandmarkerHelper(
           " while not using RunningMode.LIVE_STREAM"
       )
     }
-    val frameTime = SystemClock.uptimeMillis()
+    // Use wall-clock time to match iOS timestamp semantics
+    val frameTime = System.currentTimeMillis()
 
     // Copy out RGB bits from the frame to a bitmap buffer
     val bitmapBuffer =
@@ -187,6 +191,13 @@ class PoseLandmarkerHelper(
       frameBase64ByTimestamp[frameTime] = base64
     }
 
+    // Initialize start timestamp and increment frame count
+    if (startTimestampMs == null) {
+      startTimestampMs = frameTime
+    }
+    frameCounter += 1
+    frameNumberByTimestamp[frameTime] = frameCounter
+
     detectAsync(mpImage, frameTime)
   }
 
@@ -203,9 +214,10 @@ class PoseLandmarkerHelper(
     result: PoseLandmarkerResult,
     input: MPImage
   ) {
-    val finishTimeMs = SystemClock.uptimeMillis()
+    val finishTimeMs = System.currentTimeMillis()
     val inferenceTime = finishTimeMs - result.timestampMs()
     val frameBase64 = frameBase64ByTimestamp.remove(result.timestampMs())
+    val frameNumber = frameNumberByTimestamp.remove(result.timestampMs()) ?: 0L
 
     poseLandmarkerHelperListener?.onResults(
       ResultBundle(
@@ -213,7 +225,10 @@ class PoseLandmarkerHelper(
         inferenceTime,
         input.height,
         input.width,
-        frameBase64
+        frameBase64,
+        result.timestampMs(),
+        frameNumber,
+        startTimestampMs
       )
     )
   }
@@ -248,6 +263,9 @@ class PoseLandmarkerHelper(
     val inputImageHeight: Int,
     val inputImageWidth: Int,
     val frameBase64: String? = null,
+    val presentationTimeStamp: Long? = null,
+    val frameNumber: Long? = null,
+    val startTimestamp: Long? = null,
   )
 
   interface LandmarkerListener {

@@ -22,6 +22,9 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.WritableArray
+import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.google.gson.Gson
 import com.google.mediapipe.tasks.vision.core.RunningMode
@@ -295,30 +298,50 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
           }
         }
 
-        val additionalData = mapOf(
-          "height" to resultBundle.inputImageHeight,
-          "width" to resultBundle.inputImageWidth,
-//          "presentationTimeStamp" to resultBundle.presentationTimeStamp,
-//          "frameNumber" to resultBundle.frameNumber,
-//          "startTimestamp" to resultBundle.startTimestamp
-        )
+        // Build a WritableMap to emit a native object (not JSON string)
+        val event: WritableMap = Arguments.createMap()
 
-        val swiftDict: MutableMap<String, Any> = mutableMapOf(
-          "landmarks" to landmarksArray,
-          "additionalData" to additionalData,
-          "worldLandmarks" to worldLandmarksArray
-        )
-
-        resultBundle.frameBase64?.let {
-          swiftDict["frameBase64"] = it
+        // landmarks array
+        val landmarksWritable: WritableArray = Arguments.createArray()
+        for (lm in landmarksArray) {
+          val m: WritableMap = Arguments.createMap()
+          m.putDouble("x", (lm["x"] as Number).toDouble())
+          m.putDouble("y", (lm["y"] as Number).toDouble())
+          m.putDouble("z", (lm["z"] as Number).toDouble())
+          (lm["visibility"] as? Number)?.let { m.putDouble("visibility", it.toDouble()) }
+          (lm["presence"] as? Number)?.let { m.putDouble("presence", it.toDouble()) }
+          landmarksWritable.pushMap(m)
         }
+        event.putArray("landmarks", landmarksWritable)
 
-        val gson = Gson()
-        val jsonData = gson.toJson(swiftDict)
+        // worldLandmarks array
+        val worldLandmarksWritable: WritableArray = Arguments.createArray()
+        for (wlm in worldLandmarksArray) {
+          val m: WritableMap = Arguments.createMap()
+          m.putDouble("x", (wlm["x"] as Number).toDouble())
+          m.putDouble("y", (wlm["y"] as Number).toDouble())
+          m.putDouble("z", (wlm["z"] as Number).toDouble())
+          (wlm["visibility"] as? Number)?.let { m.putDouble("visibility", it.toDouble()) }
+          (wlm["presence"] as? Number)?.let { m.putDouble("presence", it.toDouble()) }
+          worldLandmarksWritable.pushMap(m)
+        }
+        event.putArray("worldLandmarks", worldLandmarksWritable)
+
+        // additionalData aligned with iOS keys
+        val additional: WritableMap = Arguments.createMap()
+        additional.putInt("height", resultBundle.inputImageHeight)
+        additional.putInt("width", resultBundle.inputImageWidth)
+        resultBundle.presentationTimeStamp?.let { additional.putDouble("presentationTimeStamp", it.toDouble()) }
+        resultBundle.frameNumber?.let { additional.putDouble("frameNumber", it.toDouble()) }
+        resultBundle.startTimestamp?.let { additional.putDouble("startTimestamp", it.toDouble()) }
+        event.putMap("additionalData", additional)
+
+        // frame base64
+        resultBundle.frameBase64?.let { event.putString("frameBase64", it) }
 
         val reactContext = ReactContextProvider.reactApplicationContext
         reactContext?.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-          ?.emit("onLandmark", jsonData)
+          ?.emit("onLandmark", event)
 
         fragmentCameraBinding.myOverlay.setResults(
           resultBundle.results.first(),
