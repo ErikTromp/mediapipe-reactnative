@@ -185,6 +185,9 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
     cameraProviderFuture.addListener(
       {
         cameraProvider = cameraProviderFuture.get()
+        if (_fragmentCameraBinding == null || !isAdded) {
+          return@addListener
+        }
         bindCameraUseCases()
       }, ContextCompat.getMainExecutor(requireContext())
     )
@@ -192,6 +195,9 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
 
   @SuppressLint("UnsafeOptInUsageError")
   private fun bindCameraUseCases() {
+    if (_fragmentCameraBinding == null) {
+      return
+    }
     val cameraProvider = cameraProvider
       ?: throw IllegalStateException("Camera initialization failed.")
 
@@ -221,7 +227,9 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
         this, cameraSelector, preview, imageAnalyzer
       )
 
-      preview?.setSurfaceProvider(fragmentCameraBinding.viewFinder.surfaceProvider)
+      if (_fragmentCameraBinding != null) {
+        preview?.setSurfaceProvider(fragmentCameraBinding.viewFinder.surfaceProvider)
+      }
     } catch (exc: Exception) {
       Log.e(TAG, "Use case binding failed", exc)
     }
@@ -252,8 +260,10 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
 
   override fun onConfigurationChanged(newConfig: Configuration) {
     super.onConfigurationChanged(newConfig)
-    imageAnalyzer?.targetRotation =
-      fragmentCameraBinding.viewFinder.display.rotation
+    if (_fragmentCameraBinding != null) {
+      imageAnalyzer?.targetRotation =
+        fragmentCameraBinding.viewFinder.display.rotation
+    }
   }
 
   override fun onResults(
