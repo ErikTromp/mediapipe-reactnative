@@ -1,6 +1,7 @@
 #import <React/RCTViewManager.h>
 #import "TsMediapipe-Bridging-Header.h"
 #import "React/RCTEventEmitter.h"
+#import <React/RCTBridgeModule.h>
 
 @interface RCT_EXTERN_MODULE(TsMediapipeViewManager, RCTViewManager)
 
@@ -22,4 +23,12 @@ RCT_EXPORT_VIEW_PROPERTY(rightLeg, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(leftAnkle, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(rightAnkle, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(frameLimit, NSNumber)
+@end
+
+@interface RCT_EXTERN_MODULE(MediapipeVideoModule, NSObject)
+RCT_EXTERN_METHOD(processVideo:(NSString *)uri
+                  options:(NSDictionary *)options
+                  onLandmark:(RCTResponseSenderBlock)onLandmark
+                  onComplete:(RCTResponseSenderBlock)onComplete)
+RCT_EXTERN_METHOD(cancelProcessVideo)
 @end

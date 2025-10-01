@@ -135,6 +135,17 @@ class PoseLandmarkerHelper(
     }
   }
 
+  // Detect a single frame in VIDEO mode and return the result synchronously
+  fun detectForVideoFrame(bitmap: Bitmap, timestampMs: Long): PoseLandmarkerResult? {
+    if (runningMode != RunningMode.VIDEO) {
+      throw IllegalArgumentException(
+        "Attempting to call detectForVideoFrame while not using RunningMode.VIDEO"
+      )
+    }
+    val mpImage = BitmapImageBuilder(bitmap).build()
+    return poseLandmarker?.detectForVideo(mpImage, timestampMs)
+  }
+
   // Convert the ImageProxy to MP Image and feed it to PoselandmakerHelper.
   fun detectLiveStream(
     imageProxy: ImageProxy,

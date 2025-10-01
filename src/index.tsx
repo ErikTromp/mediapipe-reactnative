@@ -44,7 +44,7 @@ type MediapipeComponentProps = TsMediapipeProps & {
   style?: ViewStyle;
 };
 
-const { MediaPipeNativeModule, TsMediapipeViewManager } = NativeModules;
+const { MediaPipeNativeModule, TsMediapipeViewManager, MediapipeVideoModule } = NativeModules;
 
 const isAndroid = Platform.OS === 'android';
 
@@ -149,3 +149,43 @@ const TsMediapipeView: React.FC<MediapipeComponentProps> = (props) => {
 };
 
 export { TsMediapipeView as RNMediapipe, switchCamera };
+
+// Video processing API
+
+type ProcessVideoOptions = {
+  fps?: number;
+  includeBase64?: boolean;
+  jpegQuality?: number; // 0..100
+  mirror?: boolean;
+  maxFrames?: number;
+};
+
+type LandmarkPayload = any; // Matches live onLandmark payload shape
+
+type OnLandmarkCallback = (payload: LandmarkPayload) => void;
+type OnCompleteCallback = (summary: { framesProcessed: number; durationMs: number }) => void;
+
+const processVideo = (
+  uri: string,
+  options: ProcessVideoOptions,
+  onLandmark: OnLandmarkCallback,
+  onComplete?: OnCompleteCallback,
+) => {
+  const module = Platform.OS === 'android' ? MediaPipeNativeModule : MediapipeVideoModule;
+  if (!module || typeof module.processVideo !== 'function') {
+    throw new Error('Native video processing module not linked');
+  }
+  // Ensure callbacks exist to keep native simple
+  const safeOnLandmark = onLandmark || (() => {});
+  const safeOnComplete = onComplete || (() => {});
+  module.processVideo(uri, options || {}, safeOnLandmark, safeOnComplete);
+};
+
+const cancelProcessVideo = () => {
+  const module = Platform.OS === 'android' ? MediaPipeNativeModule : MediapipeVideoModule;
+  if (module && typeof module.cancelProcessVideo === 'function') {
+    module.cancelProcessVideo();
+  }
+};
+
+export { processVideo, cancelProcessVideo };
