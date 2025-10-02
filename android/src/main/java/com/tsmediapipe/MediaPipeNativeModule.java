@@ -56,6 +56,22 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void processVideo(String uri, ReadableMap options, Callback onLandmark, Callback onComplete) {
+    processVideoInternal(uri, options, onLandmark, onComplete, null);
+  }
+
+  @ReactMethod
+  public void processVideoWithDebug(String uri, ReadableMap options, Callback onLandmark, Callback onComplete, Callback onDebug) {
+    processVideoInternal(uri, options, onLandmark, onComplete, onDebug);
+  }
+
+  private void debugLog(Callback cb, String msg) {
+    Log.d("MediaPipeNativeModule", msg);
+    if (cb != null) {
+      try { cb.invoke(msg); } catch (Throwable ignore) {}
+    }
+  }
+
+  private void processVideoInternal(String uri, ReadableMap options, Callback onLandmark, Callback onComplete, Callback onDebug) {
     cancelRequested = false;
     final double fps = options.hasKey("fps") ? options.getDouble("fps") : 15.0;
     final boolean includeBase64 = options.hasKey("includeBase64") && options.getBoolean("includeBase64");
@@ -66,7 +82,7 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
     new Thread(() -> {
       int framesProcessed = 0;
       try {
-        Log.d("MediaPipeNativeModule", "processVideo start uri=" + uri + ", fps=" + fps + ", includeBase64=" + includeBase64);
+        debugLog(onDebug, "processVideo start uri=" + uri + ", fps=" + fps + ", includeBase64=" + includeBase64);
         MediaMetadataRetriever retriever = new MediaMetadataRetriever();
         try {
           Uri parsed = Uri.parse(uri);
@@ -76,13 +92,13 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
             retriever.setDataSource(uri);
           }
         } catch (Throwable t) {
-          Log.e("MediaPipeNativeModule", "setDataSource failed: " + t);
+          debugLog(onDebug, "setDataSource failed: " + t);
           throw t;
         }
         String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
         int durationMs = durationStr != null ? Integer.parseInt(durationStr) : 0;
         int stepMs = Math.max(1, (int)Math.round(1000.0 / fps));
-        Log.d("MediaPipeNativeModule", "durationMs=" + durationMs + ", stepMs=" + stepMs);
+        debugLog(onDebug, "durationMs=" + durationMs + ", stepMs=" + stepMs);
 
         // Setup PoseLandmarker in VIDEO mode
         PoseLandmarkerHelper helper = new PoseLandmarkerHelper(
@@ -121,7 +137,7 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
           try {
             result = helper.detectForVideoFrame(processed, currentMs);
           } catch (Throwable t) {
-            Log.e("MediaPipeNativeModule", "detectForVideoFrame error at " + currentMs + "ms: " + t);
+            debugLog(onDebug, "detectForVideoFrame error at " + currentMs + "ms: " + t);
           }
 
           WritableMap payload = Arguments.createMap();
@@ -175,7 +191,7 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
           try {
             onLandmark.invoke(payload);
           } catch (Throwable t) {
-            Log.e("MediaPipeNativeModule", "onLandmark callback error: " + t);
+            debugLog(onDebug, "onLandmark callback error: " + t);
           }
           framesProcessed++;
           frameNumber++;
@@ -184,7 +200,7 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
           int p = (int)((currentMs * 100L) / Math.max(1, durationMs));
           if (p / 10 > lastLog) {
             lastLog = p / 10;
-            Log.d("MediaPipeNativeModule", "progress ~" + (lastLog * 10) + "% framesProcessed=" + framesProcessed);
+            debugLog(onDebug, "progress ~" + (lastLog * 10) + "% framesProcessed=" + framesProcessed);
           }
         }
 
@@ -195,10 +211,11 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
         summary.putInt("durationMs", durationMs);
         onComplete.invoke(summary);
       } catch (Throwable t) {
-        Log.e("MediaPipeNativeModule", "processVideo fatal: " + t);
+        debugLog(onDebug, "processVideo fatal: " + t);
         WritableMap summary = Arguments.createMap();
         summary.putInt("framesProcessed", framesProcessed);
         summary.putInt("durationMs", 0);
+        summary.putString("error", String.valueOf(t));
         onComplete.invoke(summary);
       }
     }).start();

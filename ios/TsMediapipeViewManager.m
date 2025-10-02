@@ -31,4 +31,9 @@ RCT_EXTERN_METHOD(processVideo:(NSString *)uri
                   onLandmark:(RCTResponseSenderBlock)onLandmark
                   onComplete:(RCTResponseSenderBlock)onComplete)
 RCT_EXTERN_METHOD(cancelProcessVideo)
+RCT_EXTERN_METHOD(processVideoWithDebug:(NSString *)uri
+                  options:(NSDictionary *)options
+                  onLandmark:(RCTResponseSenderBlock)onLandmark
+                  onComplete:(RCTResponseSenderBlock)onComplete
+                  onDebug:(RCTResponseSenderBlock)onDebug)
 @end

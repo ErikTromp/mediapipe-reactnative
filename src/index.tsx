@@ -163,13 +163,15 @@ type ProcessVideoOptions = {
 type LandmarkPayload = any; // Matches live onLandmark payload shape
 
 type OnLandmarkCallback = (payload: LandmarkPayload) => void;
-type OnCompleteCallback = (summary: { framesProcessed: number; durationMs: number }) => void;
+type OnCompleteCallback = (summary: { framesProcessed: number; durationMs: number; error?: string }) => void;
+type OnDebugCallback = (message: string) => void;
 
 const processVideo = (
   uri: string,
   options: ProcessVideoOptions,
   onLandmark: OnLandmarkCallback,
   onComplete?: OnCompleteCallback,
+  onDebug?: OnDebugCallback,
 ) => {
   const module = Platform.OS === 'android' ? MediaPipeNativeModule : MediapipeVideoModule;
   if (!module || typeof module.processVideo !== 'function') {
@@ -178,7 +180,11 @@ const processVideo = (
   // Ensure callbacks exist to keep native simple
   const safeOnLandmark = onLandmark || (() => {});
   const safeOnComplete = onComplete || (() => {});
-  module.processVideo(uri, options || {}, safeOnLandmark, safeOnComplete);
+  if (onDebug && typeof module.processVideoWithDebug === 'function') {
+    module.processVideoWithDebug(uri, options || {}, safeOnLandmark, safeOnComplete, onDebug);
+  } else {
+    module.processVideo(uri, options || {}, safeOnLandmark, safeOnComplete);
+  }
 };
 
 const cancelProcessVideo = () => {

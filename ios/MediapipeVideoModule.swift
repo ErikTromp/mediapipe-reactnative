@@ -20,6 +20,17 @@ class MediapipeVideoModule: NSObject, RCTBridgeModule {
   }
 
   @objc
+  func processVideoWithDebug(_ uri: String,
+                             options: NSDictionary,
+                             onLandmark: @escaping RCTResponseSenderBlock,
+                             onComplete: @escaping RCTResponseSenderBlock,
+                             onDebug: @escaping RCTResponseSenderBlock) {
+    processVideo(uri, options: options, onLandmark: onLandmark, onComplete: { summary in
+      onComplete(summary)
+    })
+  }
+
+  @objc
   func processVideo(_ uri: String,
                     options: NSDictionary,
                     onLandmark: @escaping RCTResponseSenderBlock,
