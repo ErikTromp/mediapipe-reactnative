@@ -86,16 +86,36 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
         MediaMetadataRetriever retriever = new MediaMetadataRetriever();
         try {
           Uri parsed = Uri.parse(uri);
-          if ("content".equals(parsed.getScheme()) || "file".equals(parsed.getScheme())) {
-            retriever.setDataSource(getReactApplicationContext(), parsed);
+          String scheme = parsed.getScheme();
+          debugLog(onDebug, "setDataSource scheme=" + scheme);
+          if ("content".equals(scheme) || "file".equals(scheme)) {
+            android.os.ParcelFileDescriptor pfd = null;
+            try {
+              pfd = getReactApplicationContext().getContentResolver().openFileDescriptor(parsed, "r");
+              if (pfd != null) {
+                retriever.setDataSource(pfd.getFileDescriptor());
+                debugLog(onDebug, "setDataSource via FileDescriptor OK");
+              } else {
+                retriever.setDataSource(getReactApplicationContext(), parsed);
+                debugLog(onDebug, "setDataSource via Context+Uri OK (null FD)");
+              }
+            } finally {
+              if (pfd != null) try { pfd.close(); } catch (Throwable ignore) {}
+            }
           } else {
             retriever.setDataSource(uri);
+            debugLog(onDebug, "setDataSource via String OK");
           }
         } catch (Throwable t) {
           debugLog(onDebug, "setDataSource failed: " + t);
           throw t;
         }
-        String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+        String durationStr = null;
+        try {
+          durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+        } catch (Throwable t) {
+          debugLog(onDebug, "extractMetadata(DURATION) failed: " + t);
+        }
         int durationMs = durationStr != null ? Integer.parseInt(durationStr) : 0;
         int stepMs = Math.max(1, (int)Math.round(1000.0 / fps));
         int totalFrames = durationMs > 0 ? (durationMs / stepMs) + 1 : 1;
@@ -112,6 +132,11 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
           getReactApplicationContext(),
           null
         );
+        if (helper.isClose()) {
+          debugLog(onDebug, "PoseLandmarkerHelper failed to initialize");
+        } else {
+          debugLog(onDebug, "PoseLandmarkerHelper initialized in VIDEO mode");
+        }
 
         long startTs = System.currentTimeMillis();
         int frameNumber = 0;
@@ -122,10 +147,15 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
           if (cancelRequested || frameNumber >= maxFrames) break;
 
           debugLog(onDebug, "decoding frame#" + frameNumber + " at " + currentMs + "ms");
-          Bitmap frame = retriever.getFrameAtTime(
-            currentMs * 1000L,
-            useClosestSync ? MediaMetadataRetriever.OPTION_CLOSEST_SYNC : MediaMetadataRetriever.OPTION_CLOSEST
-          );
+          Bitmap frame = null;
+          try {
+            frame = retriever.getFrameAtTime(
+              currentMs * 1000L,
+              useClosestSync ? MediaMetadataRetriever.OPTION_CLOSEST_SYNC : MediaMetadataRetriever.OPTION_CLOSEST
+            );
+          } catch (Throwable t) {
+            debugLog(onDebug, "getFrameAtTime failed at " + currentMs + "ms: " + t);
+          }
           if (frame == null) {
             consecutiveNulls++;
             if (consecutiveNulls == 3 && !useClosestSync) {
