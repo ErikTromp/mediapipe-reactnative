@@ -98,7 +98,8 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
         String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
         int durationMs = durationStr != null ? Integer.parseInt(durationStr) : 0;
         int stepMs = Math.max(1, (int)Math.round(1000.0 / fps));
-        debugLog(onDebug, "durationMs=" + durationMs + ", stepMs=" + stepMs);
+        int totalFrames = durationMs > 0 ? (durationMs / stepMs) + 1 : 1;
+        debugLog(onDebug, "durationMs=" + durationMs + ", stepMs=" + stepMs + ", estFrames=" + totalFrames);
 
         // Setup PoseLandmarker in VIDEO mode
         PoseLandmarkerHelper helper = new PoseLandmarkerHelper(
@@ -115,11 +116,28 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
         long startTs = System.currentTimeMillis();
         int frameNumber = 0;
         int lastLog = -1;
+        boolean useClosestSync = false;
+        int consecutiveNulls = 0;
         for (int currentMs = 0; currentMs <= durationMs; currentMs += stepMs) {
           if (cancelRequested || frameNumber >= maxFrames) break;
 
-          Bitmap frame = retriever.getFrameAtTime(currentMs * 1000L, MediaMetadataRetriever.OPTION_CLOSEST);
-          if (frame == null) { frameNumber++; continue; }
+          debugLog(onDebug, "decoding frame#" + frameNumber + " at " + currentMs + "ms");
+          Bitmap frame = retriever.getFrameAtTime(
+            currentMs * 1000L,
+            useClosestSync ? MediaMetadataRetriever.OPTION_CLOSEST_SYNC : MediaMetadataRetriever.OPTION_CLOSEST
+          );
+          if (frame == null) {
+            consecutiveNulls++;
+            if (consecutiveNulls == 3 && !useClosestSync) {
+              useClosestSync = true;
+              debugLog(onDebug, "switching to OPTION_CLOSEST_SYNC due to null frames");
+            }
+            frameNumber++;
+            continue;
+          } else {
+            consecutiveNulls = 0;
+          }
+          debugLog(onDebug, "decoded bitmap w=" + frame.getWidth() + " h=" + frame.getHeight());
 
           // Orientation/mirror handled approximately here if needed
           Bitmap processed = frame;
@@ -142,6 +160,8 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
 
           WritableMap payload = Arguments.createMap();
           if (result != null) {
+            int lmCount = result.landmarks().isEmpty() ? 0 : result.landmarks().get(0).size();
+            debugLog(onDebug, "landmarks detected=" + lmCount);
             // landmarks
             WritableArray landmarksWritable = Arguments.createArray();
             if (!result.landmarks().isEmpty()) {
