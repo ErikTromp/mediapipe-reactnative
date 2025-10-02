@@ -40,8 +40,15 @@ class MediapipeVideoModule: NSObject, RCTBridgeModule {
       guard let self = self else { return }
       defer { self.isProcessing = false }
 
-      guard let url = URL(string: uri) else {
-        onComplete([["framesProcessed": 0, "durationMs": 0]])
+      NSLog("[MediapipeVideoModule] processVideo start uri=%@ options=%@", uri, options)
+
+      // Support file:// and content:// via security-scoped URLs if needed
+      let url: URL
+      if let parsed = URL(string: uri) {
+        url = parsed
+      } else {
+        NSLog("[MediapipeVideoModule] invalid URI")
+        onComplete([["framesProcessed": 0, "durationMs": 0, "error": "invalid_uri"]])
         return
       }
 
@@ -49,17 +56,22 @@ class MediapipeVideoModule: NSObject, RCTBridgeModule {
       let durationSeconds = CMTimeGetSeconds(asset.duration)
       let durationMs = Int(durationSeconds * 1000.0)
       let stepMs = max(1, Int(1000.0 / fps))
+      NSLog("[MediapipeVideoModule] durationMs=%d stepMs=%d", durationMs, stepMs)
 
       // Landmarker setup (video mode)
+      // Resolve model path from pod resource or bundle
+      let modelPath = Bundle.main.path(forResource: "pose_landmarker_full", ofType: "task")
+        ?? Bundle(for: type(of: self)).path(forResource: "pose_landmarker_full", ofType: "task")
       guard let service = PoseLandmarkerService.videoPoseLandmarkerService(
-        modelPath: Bundle.main.path(forResource: "pose_landmarker_full", ofType: "task"),
+        modelPath: modelPath,
         numPoses: 1,
         minPoseDetectionConfidence: 0.5,
         minPosePresenceConfidence: 0.5,
         minTrackingConfidence: 0.5,
         videoDelegate: nil,
         delegate: .CPU) else {
-        onComplete([["framesProcessed": 0, "durationMs": 0]])
+        NSLog("[MediapipeVideoModule] failed to initialize PoseLandmarkerService")
+        onComplete([["framesProcessed": 0, "durationMs": 0, "error": "landmarker_init_failed"]])
         return
       }
 
@@ -78,6 +90,7 @@ class MediapipeVideoModule: NSObject, RCTBridgeModule {
 
         let time = CMTime(value: Int64(currentMs), timescale: 1000)
         guard let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) else {
+          if frameNumber < 3 { NSLog("[MediapipeVideoModule] copyCGImage failed at ms=%d", currentMs) }
           currentMs += stepMs
           frameNumber += 1
           continue
@@ -96,6 +109,7 @@ class MediapipeVideoModule: NSObject, RCTBridgeModule {
             videoFrame: MPImage(uiImage: uiImage),
             timestampInMilliseconds: timestampMs)
         } catch {
+          NSLog("[MediapipeVideoModule] detect error at ms=%d error=%@", timestampMs, String(describing: error))
           result = nil
         }
 

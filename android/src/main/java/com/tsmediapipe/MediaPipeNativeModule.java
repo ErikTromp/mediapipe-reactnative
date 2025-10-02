@@ -4,6 +4,7 @@ import android.util.Log;
 import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
 import android.util.Base64;
+import android.net.Uri;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -65,11 +66,23 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
     new Thread(() -> {
       int framesProcessed = 0;
       try {
+        Log.d("MediaPipeNativeModule", "processVideo start uri=" + uri + ", fps=" + fps + ", includeBase64=" + includeBase64);
         MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-        retriever.setDataSource(uri);
+        try {
+          Uri parsed = Uri.parse(uri);
+          if ("content".equals(parsed.getScheme()) || "file".equals(parsed.getScheme())) {
+            retriever.setDataSource(getReactApplicationContext(), parsed);
+          } else {
+            retriever.setDataSource(uri);
+          }
+        } catch (Throwable t) {
+          Log.e("MediaPipeNativeModule", "setDataSource failed: " + t);
+          throw t;
+        }
         String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
         int durationMs = durationStr != null ? Integer.parseInt(durationStr) : 0;
         int stepMs = Math.max(1, (int)Math.round(1000.0 / fps));
+        Log.d("MediaPipeNativeModule", "durationMs=" + durationMs + ", stepMs=" + stepMs);
 
         // Setup PoseLandmarker in VIDEO mode
         PoseLandmarkerHelper helper = new PoseLandmarkerHelper(
@@ -85,6 +98,7 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
 
         long startTs = System.currentTimeMillis();
         int frameNumber = 0;
+        int lastLog = -1;
         for (int currentMs = 0; currentMs <= durationMs; currentMs += stepMs) {
           if (cancelRequested || frameNumber >= maxFrames) break;
 
@@ -107,7 +121,7 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
           try {
             result = helper.detectForVideoFrame(processed, currentMs);
           } catch (Throwable t) {
-            // ignore failed frame
+            Log.e("MediaPipeNativeModule", "detectForVideoFrame error at " + currentMs + "ms: " + t);
           }
 
           WritableMap payload = Arguments.createMap();
@@ -158,16 +172,30 @@ public class MediaPipeNativeModule extends ReactContextBaseJavaModule {
             }
           }
 
-          onLandmark.invoke(payload);
+          try {
+            onLandmark.invoke(payload);
+          } catch (Throwable t) {
+            Log.e("MediaPipeNativeModule", "onLandmark callback error: " + t);
+          }
           framesProcessed++;
           frameNumber++;
+
+          // periodic progress log
+          int p = (int)((currentMs * 100L) / Math.max(1, durationMs));
+          if (p / 10 > lastLog) {
+            lastLog = p / 10;
+            Log.d("MediaPipeNativeModule", "progress ~" + (lastLog * 10) + "% framesProcessed=" + framesProcessed);
+          }
         }
+
+        try { retriever.release(); } catch (Throwable ignore) {}
 
         WritableMap summary = Arguments.createMap();
         summary.putInt("framesProcessed", framesProcessed);
         summary.putInt("durationMs", durationMs);
         onComplete.invoke(summary);
       } catch (Throwable t) {
+        Log.e("MediaPipeNativeModule", "processVideo fatal: " + t);
         WritableMap summary = Arguments.createMap();
         summary.putInt("framesProcessed", framesProcessed);
         summary.putInt("durationMs", 0);
