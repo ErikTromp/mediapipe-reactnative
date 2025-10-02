@@ -11,6 +11,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import android.view.TextureView
+import android.media.MediaPlayer
+import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
@@ -35,6 +38,8 @@ import com.tsmediapipe.ReactContextProvider
 import com.tsmediapipe.databinding.FragmentMyCameraBinding
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
@@ -56,9 +61,13 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
   private var camera: Camera? = null
   private var cameraProvider: ProcessCameraProvider? = null
   private var cameraFacing = CameraSelector.LENS_FACING_FRONT
+  private var sourceUri: String? = null
+  private var mediaPlayer: MediaPlayer? = null
+  private var videoTexture: TextureView? = null
 
   /** Blocking ML operations are performed using this executor */
-  private lateinit var backgroundExecutor: ExecutorService
+  private lateinit var backgroundExecutor: ScheduledExecutorService
+  private var samplingFuture: ScheduledFuture<*>? = null
 
   fun hasPermissions(context: Context) = PERMISSIONS_REQUIRED.all {
     ContextCompat.checkSelfPermission(
@@ -121,6 +130,13 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
 
   override fun onPause() {
     super.onPause()
+    samplingFuture?.cancel(true)
+    samplingFuture = null
+    mediaPlayer?.let {
+      try { it.stop() } catch (_: Exception) {}
+      it.release()
+    }
+    mediaPlayer = null
     if (this::poseLandmarkerHelper.isInitialized) {
       viewModel.setMinPoseDetectionConfidence(poseLandmarkerHelper.minPoseDetectionConfidence)
       viewModel.setMinPoseTrackingConfidence(poseLandmarkerHelper.minPoseTrackingConfidence)
@@ -136,6 +152,8 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
     _fragmentCameraBinding = null
     super.onDestroyView()
 
+    samplingFuture?.cancel(true)
+    samplingFuture = null
     backgroundExecutor.shutdown()
     backgroundExecutor.awaitTermination(
       Long.MAX_VALUE, TimeUnit.NANOSECONDS
@@ -145,6 +163,7 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     CameraFragmentManager.cameraFragment = this
+    sourceUri = arguments?.getString("source")
   }
 
   override fun onDestroy() {
@@ -160,6 +179,8 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
     _fragmentCameraBinding =
       FragmentMyCameraBinding.inflate(inflater, container, false)
 
+    videoTexture = fragmentCameraBinding.root.findViewById(com.tsmediapipe.R.id.video_texture)
+
     return fragmentCameraBinding.root
   }
 
@@ -168,15 +189,72 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
     super.onViewCreated(view, savedInstanceState)
 
     // Initialize our background executor
-    backgroundExecutor = Executors.newSingleThreadExecutor()
+    backgroundExecutor = Executors.newSingleThreadScheduledExecutor()
 
-    if (!hasPermissions(requireContext())) {
-      requestPermissionLauncher.launch(
-        Manifest.permission.CAMERA
-      )
+    if (sourceUri.isNullOrEmpty()) {
+      if (!hasPermissions(requireContext())) {
+        requestPermissionLauncher.launch(
+          Manifest.permission.CAMERA
+        )
+      } else {
+        completeCameraSetUpWithPose()
+      }
     } else {
-      completeCameraSetUpWithPose()
+      startVideoProcessing()
     }
+  }
+
+  private fun startVideoProcessing() {
+    try {
+      // Initialize helper in VIDEO mode
+      backgroundExecutor.execute {
+        poseLandmarkerHelper = PoseLandmarkerHelper(
+          context = requireContext(),
+          runningMode = com.google.mediapipe.tasks.vision.core.RunningMode.VIDEO,
+          minPoseDetectionConfidence = viewModel.currentMinPoseDetectionConfidence,
+          minPoseTrackingConfidence = viewModel.currentMinPoseTrackingConfidence,
+          minPosePresenceConfidence = viewModel.currentMinPosePresenceConfidence,
+          currentDelegate = viewModel.currentDelegate,
+          poseLandmarkerHelperListener = this
+        )
+      }
+
+      fragmentCameraBinding.viewFinder.visibility = View.GONE
+      videoTexture?.visibility = View.VISIBLE
+
+      val uri = Uri.parse(sourceUri)
+      mediaPlayer = MediaPlayer().apply {
+        setDataSource(requireContext(), uri)
+        setOnPreparedListener {
+          videoTexture?.let { texture ->
+            it.setSurface(android.view.Surface(texture.surfaceTexture))
+            it.start()
+            scheduleFrameSampling()
+          }
+        }
+        setOnCompletionListener {
+          // no-op for now
+        }
+        prepareAsync()
+      }
+    } catch (e: Exception) {
+      Log.e(TAG, "startVideoProcessing error", e)
+      Toast.makeText(requireContext(), "Video error: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+  }
+
+  private fun scheduleFrameSampling() {
+    // Sample frames at ~30 FPS using background executor
+    val samplingIntervalMs = 33L
+    val task = Runnable {
+      if (_fragmentCameraBinding == null) return@Runnable
+      val bmp = videoTexture?.bitmap
+      if (bmp != null) {
+        val ts = System.currentTimeMillis()
+        poseLandmarkerHelper.detectBitmapFrame(bmp, ts)
+      }
+    }
+    samplingFuture = backgroundExecutor.scheduleAtFixedRate(task, 0, samplingIntervalMs, java.util.concurrent.TimeUnit.MILLISECONDS)
   }
 
   private fun setUpCamera() {
@@ -357,7 +435,7 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
           resultBundle.results.first(),
           resultBundle.inputImageHeight,
           resultBundle.inputImageWidth,
-          RunningMode.LIVE_STREAM
+          if (sourceUri.isNullOrEmpty()) RunningMode.LIVE_STREAM else RunningMode.VIDEO
         )
         fragmentCameraBinding.myOverlay.invalidate()
       }

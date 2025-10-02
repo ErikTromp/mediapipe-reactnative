@@ -24,6 +24,7 @@ const LINKING_ERROR =
 type TsMediapipeProps = {
   ref?: MutableRefObject<View | null>;
   onLandmark?: (event: any) => void;
+  source?: string; // optional file URI to process instead of live camera
   face?: boolean;
   leftArm?: boolean;
   rightArm?: boolean;
@@ -130,6 +131,7 @@ const TsMediapipeView: React.FC<MediapipeComponentProps> = (props) => {
           isAndroid ? PixelRatio.getPixelSizeForLayoutSize(height) : height
         }
         width={isAndroid ? PixelRatio.getPixelSizeForLayoutSize(width) : width}
+        source={(props as any).source}
         onLandmark={bodyLandmark}
         face={face}
         leftArm={leftArm}

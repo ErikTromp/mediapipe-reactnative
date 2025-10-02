@@ -27,6 +27,12 @@
     app:scaleType="fillStart"
     />
 
+  <TextureView
+    android:id="@+id/video_texture"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:visibility="gone" />
+
   <com.tsmediapipe.OverlayView
     android:id="@+id/myOverlay"
     android:layout_width="match_parent"

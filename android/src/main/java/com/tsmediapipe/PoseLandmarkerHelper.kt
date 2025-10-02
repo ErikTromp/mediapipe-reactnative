@@ -209,6 +209,47 @@ class PoseLandmarkerHelper(
     // be returned in returnLivestreamResult function
   }
 
+  // Detect a single bitmap frame in VIDEO mode and synchronously return the result via listener
+  fun detectBitmapFrame(bitmap: Bitmap, timestampMs: Long) {
+    val mpImage = BitmapImageBuilder(bitmap).build()
+    try {
+      // If helper was constructed in LIVE_STREAM, reconfigure for VIDEO
+      if (runningMode != RunningMode.VIDEO) {
+        runningMode = RunningMode.VIDEO
+        clearPoseLandmarker()
+        setupPoseLandmarker()
+      }
+      val result = poseLandmarker?.detectForVideo(mpImage, timestampMs)
+      if (result != null) {
+        // Encode base64 for this frame
+        val base64 = runCatching {
+          val bos = ByteArrayOutputStream()
+          bitmap.compress(Bitmap.CompressFormat.JPEG, 70, bos)
+          Base64.encodeToString(bos.toByteArray(), Base64.NO_WRAP)
+        }.getOrNull()
+
+        // Initialize start
+        if (startTimestampMs == null) startTimestampMs = timestampMs
+        frameCounter += 1
+
+        poseLandmarkerHelperListener?.onResults(
+          ResultBundle(
+            listOf(result),
+            0L,
+            bitmap.height,
+            bitmap.width,
+            base64,
+            timestampMs,
+            frameCounter,
+            startTimestampMs
+          )
+        )
+      }
+    } catch (e: Exception) {
+      poseLandmarkerHelperListener?.onError(e.message ?: "detectBitmapFrame error")
+    }
+  }
+
   // Return the landmark result to this PoseLandmarkerHelper's caller
   private fun returnLivestreamResult(
     result: PoseLandmarkerResult,

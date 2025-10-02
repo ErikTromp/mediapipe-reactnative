@@ -30,6 +30,7 @@ public class TsMediapipeViewManager extends ViewGroupManager<FrameLayout> {
   private int propHeight;
   private Choreographer.FrameCallback frameCallback;
   private CameraFragment currentFragment;
+  private String source;
 
   ReactApplicationContext reactContext;
 
@@ -227,6 +228,12 @@ public class TsMediapipeViewManager extends ViewGroupManager<FrameLayout> {
     }
   }
 
+  @ReactProp(name = "source")
+  public void setSourceProp(FrameLayout view, @Nullable String source) {
+    this.source = source;
+    Log.d("TsMediapipe", "Source set to: " + source);
+  }
+
   @ReactProp(name = "face")
   public void setFaceProp(View view, boolean face) {
     GlobalState.isFaceEnabled = face;
@@ -294,6 +301,11 @@ public class TsMediapipeViewManager extends ViewGroupManager<FrameLayout> {
 
     try {
       currentFragment = new CameraFragment();
+      if (this.source != null && !this.source.isEmpty()) {
+        android.os.Bundle args = new android.os.Bundle();
+        args.putString("source", this.source);
+        currentFragment.setArguments(args);
+      }
       final FragmentManager fragmentManager = activity.getSupportFragmentManager();
 
       // Use the FrameLayout's ID instead of reactNativeViewId
