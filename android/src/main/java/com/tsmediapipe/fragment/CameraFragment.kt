@@ -261,7 +261,10 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
   override fun onConfigurationChanged(newConfig: Configuration) {
     super.onConfigurationChanged(newConfig)
     if (_fragmentCameraBinding != null) {
+      // Keep analyzer and preview aligned with the current display rotation
       imageAnalyzer?.targetRotation =
+        fragmentCameraBinding.viewFinder.display.rotation
+      preview?.targetRotation =
         fragmentCameraBinding.viewFinder.display.rotation
     }
   }

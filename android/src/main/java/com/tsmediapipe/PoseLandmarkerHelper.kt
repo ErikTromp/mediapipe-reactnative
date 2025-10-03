@@ -160,18 +160,16 @@ class PoseLandmarkerHelper(
     imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
     imageProxy.close()
 
+    // Build a transform matrix that rotates around the image center and mirrors (front camera)
+    val cx = imageProxy.width / 2f
+    val cy = imageProxy.height / 2f
     val matrix = Matrix().apply {
-      // Rotate the frame received from the camera to be in the same direction as it'll be shown
-      postRotate(imageProxy.imageInfo.rotationDegrees.toFloat())
+      // Rotate the frame around center to match display orientation
+      postRotate(imageProxy.imageInfo.rotationDegrees.toFloat(), cx, cy)
 
-      // flip image if user use front camera
+      // Mirror horizontally around center for front camera so overlay aligns
       if (isFrontCamera) {
-        postScale(
-          -1f,
-          1f,
-          imageProxy.width.toFloat(),
-          imageProxy.height.toFloat()
-        )
+        postScale(-1f, 1f, cx, cy)
       }
     }
     val rotatedBitmap = Bitmap.createBitmap(

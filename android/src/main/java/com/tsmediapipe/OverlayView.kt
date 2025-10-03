@@ -202,9 +202,8 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
       }
 
       RunningMode.LIVE_STREAM -> {
-        // PreviewView is in FILL_START mode. So we need to scale up the
-        // landmarks to match with the size that the captured images will be
-        // displayed.
+        // PreviewView is in FILL_CENTER mode. Scale landmarks to match the
+        // displayed preview size so overlay aligns with the camera frames.
         max(width * 1f / imageWidth, height * 1f / imageHeight)
       }
     }
