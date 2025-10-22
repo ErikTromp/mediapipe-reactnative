@@ -278,7 +278,6 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
         val data = resultBundle.results.first()
         val landmarksArray: MutableList<Map<String, Any>> = mutableListOf()
         val worldLandmarksArray: MutableList<Map<String, Any>> = mutableListOf()
-
         val landmarks = data.landmarks()
         val worldLandmarks = data.worldLandmarks()
 

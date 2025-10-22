@@ -21,6 +21,8 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
   private var linePaint = Paint()
 
   private var scaleFactor: Float = 1f
+  private var offsetX: Float = 0f
+  private var offsetY: Float = 0f
   private var imageWidth: Int = 1
   private var imageHeight: Int = 1
 
@@ -79,20 +81,20 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
         for ((count, it) in PoseLandmarker.POSE_LANDMARKS.withIndex()) {
           if (face && it.start() in 0..10) {
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor,
+              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
+              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
               linePaint
             )
           }
 
           if (torso && ((it.start() == 11 && it.end() == 12) || (it.start() == 23 && it.end() == 24) || (it.start() == 11 && it.end() == 23) || (it.start() == 12 && it.end() == 24))) {
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor,
+              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
+              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
               linePaint
             )
           }
@@ -100,10 +102,10 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
           if (leftArm && ((it.start() == 11 && it.end() == 13) || (it.start() == 13 && it.end() == 15))) {
             print("left arm true cond")
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor,
+              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
+              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
               linePaint
             )
           }
@@ -111,10 +113,10 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
           if (rightArm && ((it.start() == 12 && it.end() == 14) || (it.start() == 14 && it.end() == 16))) {
             print("right arm true cond")
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor,
+              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
+              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
               linePaint
             )
           }
@@ -122,10 +124,10 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
           if (leftLeg && ((it.start() == 23 && it.end() == 25) || (it.start() == 25 && it.end() == 27))) {
             print("left leg true cond")
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor,
+              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
+              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
               linePaint
             )
           }
@@ -133,20 +135,20 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
           if (rightLeg && ((it.start() == 24 && it.end() == 26) || (it.start() == 26 && it.end() == 28))) {
             print("right leg true cond")
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor,
+              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
+              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
               linePaint
             )
           }
 
           if (leftWrist && ((it.start() == 15 && it.end() == 21) || (it.start() == 15 && it.end() == 17) || (it.start() == 15 && it.end() == 19) || (it.start() == 17 && it.end() == 19))) {
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor,
+              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
+              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
               linePaint
             )
           }
@@ -172,10 +174,10 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
           }
           if (rightAnkle && ((it.start() == 28 && it.end() == 30) || (it.start() == 28 && it.end() == 32) || (it.start() == 30 && it.end() == 32))) {
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor,
+              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
+              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
               linePaint
             )
           }
@@ -207,6 +209,12 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
         max(width * 1f / imageWidth, height * 1f / imageHeight)
       }
     }
+
+    // Compute center-crop offsets so overlay aligns with PreviewView
+    val scaledImageWidth = imageWidth * scaleFactor
+    val scaledImageHeight = imageHeight * scaleFactor
+    offsetX = (width - scaledImageWidth) / 2f
+    offsetY = (height - scaledImageHeight) / 2f
     invalidate()
   }
 
