@@ -31,7 +31,7 @@ class CameraView: UIView {
 
     // MARK: Controllers that manage functionality
     // Handles all the camera related functionality
-    private lazy var cameraFeedService = CameraFeedService(previewView: previewView)
+    private var cameraFeedService: CameraFeedService?
 
     private let poseLandmarkerServiceQueue = DispatchQueue(
         label: "com.google.mediapipe.cameraController.poseLandmarkerServiceQueue",
@@ -191,8 +191,14 @@ class CameraView: UIView {
         ])
     }
     private func teardownUI() {
+        // Stop and clean up camera service
+        cameraFeedService?.stopSession()
+        cameraFeedService = nil
+        
+        // Clean up pose landmarker service
+        clearPoseLandmarkerServiceOnSessionInterruption()
+        
         if previewView != nil {
-            cameraFeedService.stopSession()
             previewView.removeFromSuperview()
             previewView = nil
         }
@@ -232,14 +238,17 @@ class CameraView: UIView {
 
         setupConstraints()
 
+        // Create a new camera feed service with the new preview view
+        cameraFeedService = CameraFeedService(previewView: previewView)
+
         initializePoseLandmarkerServiceOnSessionResumption()
 
 
-        cameraFeedService.poseStarted(started: self.poseStart)
+        cameraFeedService?.poseStarted(started: self.poseStart)
 
-        cameraFeedService.setFrameLimit(limit: frameLimit)
-        cameraFeedService.setOrientation(isPortrait: self.isPortrait)
-        cameraFeedService.startLiveCameraSession {[weak self] cameraConfiguration in
+        cameraFeedService?.setFrameLimit(limit: frameLimit)
+        cameraFeedService?.setOrientation(isPortrait: self.isPortrait)
+        cameraFeedService?.startLiveCameraSession {[weak self] cameraConfiguration in
             DispatchQueue.main.async {
                 switch cameraConfiguration {
                 case .failed:
@@ -251,9 +260,9 @@ class CameraView: UIView {
                 }
             }
         }
-        cameraFeedService.delegate = self
+        cameraFeedService?.delegate = self
 
-        cameraFeedService.updateVideoPreviewLayer(toFrame: previewView.bounds)
+        cameraFeedService?.updateVideoPreviewLayer(toFrame: previewView.bounds)
         UIApplication.shared.isIdleTimerDisabled = true
     }
 
@@ -266,7 +275,7 @@ class CameraView: UIView {
     }
 
     @objc func switchCamera() {
-        cameraFeedService.switchCamera()
+        cameraFeedService?.switchCamera()
     }
 
     override func willMove(toSuperview newSuperview: UIView?) {
@@ -274,6 +283,11 @@ class CameraView: UIView {
             UIApplication.shared.isIdleTimerDisabled = false
             teardownUI()
         }
+    }
+    
+    deinit {
+        // Ensure cleanup when view is deallocated
+        teardownUI()
     }
     func requestCameraPermission() {
         AVCaptureDevice.requestAccess(for: .video) { granted in
@@ -521,9 +535,9 @@ extension CameraView: PoseLandmarkerServiceLiveStreamDelegate {
 
               //  }
                 
-                if self!.previewView != nil{
+                if self!.previewView != nil, let cameraService = weakSelf.cameraFeedService {
                     let orientaiton =  self!.isPortrait ? UIDevice.current.orientation : UIDeviceOrientation(rawValue: 3)
-                    let imageSize = weakSelf.cameraFeedService.videoResolution
+                    let imageSize = cameraService.videoResolution
                     let poseOverlays = OverlayView().poseOverlays(
                         fromMultiplePoseLandmarks: poseLandmarkerResult.landmarks,
                         inferredOnImageOfSize: imageSize,
@@ -534,7 +548,7 @@ extension CameraView: PoseLandmarkerServiceLiveStreamDelegate {
                     weakSelf.overlayView.clear()
                     weakSelf.overlayView.draw(poseOverlays: poseOverlays,
                                               inBoundsOfContentImageOfSize: imageSize,
-                                              imageContentMode: weakSelf.cameraFeedService.videoGravity.contentMode,
+                                              imageContentMode: cameraService.videoGravity.contentMode,
                                               isPortrait: self!.isPortrait)
                 }
             }

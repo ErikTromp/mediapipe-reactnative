@@ -154,6 +154,30 @@ class CameraFeedService: NSObject {
     
     deinit {
         NotificationCenter.default.removeObserver(self)
+        // Ensure session is properly stopped and cleaned up
+        // Use sync to ensure cleanup completes before deallocation
+        sessionQueue.sync {
+            // Remove observers first
+            self.removeObservers()
+            // Stop the session if running
+            if self.session.isRunning {
+                self.session.stopRunning()
+                self.isSessionRunning = false
+            }
+            // Remove all inputs and outputs from the session
+            self.session.beginConfiguration()
+            for input in self.session.inputs {
+                self.session.removeInput(input)
+            }
+            for output in self.session.outputs {
+                self.session.removeOutput(output)
+            }
+            self.session.commitConfiguration()
+        }
+        // Remove preview layer from its superlayer (must be on main thread)
+        DispatchQueue.main.sync {
+            videoPreviewLayer.removeFromSuperlayer()
+        }
     }
     
     private func setUpPreviewView(_ view: UIView) {
@@ -211,6 +235,15 @@ class CameraFeedService: NSObject {
                 self.session.stopRunning()
                 self.isSessionRunning = self.session.isRunning
             }
+            // Remove all inputs and outputs to prevent conflicts on reuse
+            self.session.beginConfiguration()
+            for input in self.session.inputs {
+                self.session.removeInput(input)
+            }
+            for output in self.session.outputs {
+                self.session.removeOutput(output)
+            }
+            self.session.commitConfiguration()
         }
         
     }
