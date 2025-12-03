@@ -4,11 +4,12 @@ import React
 @objc(TsMediapipeViewManager)
 class TsMediapipeViewManager: RCTViewManager {
     
-    private var cameraView: CameraView?
+    // Use weak reference to avoid retaining views that are being deallocated
+    private weak var currentCameraView: CameraView?
     
     override func view() -> (UIView) {
         let view = CameraView()
-        cameraView = view
+        currentCameraView = view
         return view
     }
     
@@ -17,8 +18,12 @@ class TsMediapipeViewManager: RCTViewManager {
     }
     
     @objc func switchCamera() {
-        cameraView?.switchCamera()
+        // Ensure we're on main thread and check if view is still valid
+        DispatchQueue.main.async { [weak self] in
+            guard let view = self?.currentCameraView else {
+                return
+            }
+            view.switchCamera()
+        }
     }
-    
-    
 }
