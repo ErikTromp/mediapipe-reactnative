@@ -27,6 +27,7 @@ class CameraView: UIView {
     
     private var isSessionRunning = false
     private var isObserving = false
+    private var isCleanedUp = false // Flag to prevent double cleanup
     private let backgroundQueue = DispatchQueue(label: "com.google.mediapipe.cameraController.backgroundQueue")
 
     // MARK: Controllers that manage functionality
@@ -191,12 +192,22 @@ class CameraView: UIView {
         ])
     }
     private func teardownUI() {
+        // Prevent double cleanup
+        guard !isCleanedUp else {
+            print("⚠️ CameraView.teardownUI() called but already cleaned up")
+            return
+        }
+        isCleanedUp = true
+        print("🔴 CameraView.teardownUI() called - starting cleanup")
+        
         // Stop and clean up camera service
         cameraFeedService?.stopSession()
         cameraFeedService = nil
+        print("🔴 CameraView: Camera feed service cleaned up")
         
         // Clean up pose landmarker service
         clearPoseLandmarkerServiceOnSessionInterruption()
+        print("🔴 CameraView: Pose landmarker service cleaned up")
         
         if previewView != nil {
             previewView.removeFromSuperview()
@@ -215,6 +226,7 @@ class CameraView: UIView {
             resumeButton.removeFromSuperview()
             resumeButton = nil
         }
+        print("🔴 CameraView: UI elements cleaned up")
     }
 
     private func setupUI() {
@@ -286,8 +298,19 @@ class CameraView: UIView {
     }
     
     deinit {
-        // Ensure cleanup when view is deallocated
-        teardownUI()
+        print("🔴 CameraView.deinit called - isCleanedUp: \(isCleanedUp)")
+        // Only cleanup if teardownUI wasn't already called
+        // teardownUI() is called in willMove(toSuperview:) when removed from superview
+        // This is a safety net in case willMove wasn't called
+        if !isCleanedUp {
+            print("⚠️ CameraView.deinit: teardownUI() was not called, doing emergency cleanup")
+            // Set flag first to prevent re-entry
+            isCleanedUp = true
+            // Do minimal cleanup - avoid calling stopSession which might be problematic in deinit
+            clearPoseLandmarkerServiceOnSessionInterruption()
+            cameraFeedService = nil
+            print("🔴 CameraView.deinit: Emergency cleanup completed")
+        }
     }
     func requestCameraPermission() {
         AVCaptureDevice.requestAccess(for: .video) { granted in

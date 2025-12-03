@@ -133,6 +133,7 @@ class CameraFeedService: NSObject {
     private var isPoseStarted: Bool =  true
     private var isPortrait: Bool = true
     private var frameLimit: NSNumber =  DefaultConstants.FRAME_LIMIT
+    private var isCleanedUp: Bool = false // Flag to prevent double cleanup
     //  var lastProcessedTimestamp: CMTime = CMTime.zero
     //  let processingInterval: Double = 0.05 // Adjust as needed, represents the desired interval between processing in seconds
     
@@ -153,30 +154,29 @@ class CameraFeedService: NSObject {
     }
     
     deinit {
+        print("🔴 CameraFeedService.deinit called - isCleanedUp: \(isCleanedUp)")
+        // CRITICAL: Never use sessionQueue in deinit - it can cause deadlocks if deinit
+        // is called from within a block executing on that queue.
+        // stopSession() MUST be called before deallocation.
+        
+        // Only do thread-safe cleanup that doesn't require the session queue
         NotificationCenter.default.removeObserver(self)
-        // Ensure session is properly stopped and cleaned up
-        // Use sync to ensure cleanup completes before deallocation
-        sessionQueue.sync {
-            // Remove observers first
-            self.removeObservers()
-            // Stop the session if running
-            if self.session.isRunning {
-                self.session.stopRunning()
-                self.isSessionRunning = false
-            }
-            // Remove all inputs and outputs from the session
-            self.session.beginConfiguration()
-            for input in self.session.inputs {
-                self.session.removeInput(input)
-            }
-            for output in self.session.outputs {
-                self.session.removeOutput(output)
-            }
-            self.session.commitConfiguration()
+        
+        // If stopSession wasn't called, we can't safely clean up here without risking deadlock
+        // Just log a warning - the session will be cleaned up by the system eventually
+        if !isCleanedUp {
+            print("⚠️⚠️⚠️ CRITICAL: CameraFeedService.deinit: stopSession() was not called before deallocation!")
+            print("⚠️ This should never happen - ensure stopSession() is called before releasing the service")
         }
-        // Remove preview layer from its superlayer (must be on main thread)
-        DispatchQueue.main.sync {
+        
+        // Remove preview layer from main thread if still attached
+        // Use async to avoid blocking, but only if we're not already on main thread
+        if Thread.isMainThread {
             videoPreviewLayer.removeFromSuperlayer()
+        } else {
+            DispatchQueue.main.async { [weak videoPreviewLayer] in
+                videoPreviewLayer?.removeFromSuperlayer()
+            }
         }
     }
     
@@ -229,23 +229,63 @@ class CameraFeedService: NSObject {
      This method stops a running an AVCaptureSession.
      */
     func stopSession() {
+        // Prevent double cleanup
+        guard !isCleanedUp else {
+            print("⚠️ CameraFeedService.stopSession() called but already cleaned up")
+            return
+        }
+        isCleanedUp = true
+        print("🔴 CameraFeedService.stopSession() called - starting cleanup")
+        
         self.removeObservers()
-        sessionQueue.async {
+        
+        // Use a semaphore to ensure cleanup completes before returning
+        // This prevents deinit from being called while cleanup is still in progress
+        let cleanupSemaphore = DispatchSemaphore(value: 0)
+        
+        sessionQueue.async { [weak self] in
+            defer {
+                cleanupSemaphore.signal()
+            }
+            
+            guard let self = self else {
+                print("⚠️ CameraFeedService.stopSession() async block: self is nil")
+                return
+            }
+            
             if self.session.isRunning {
                 self.session.stopRunning()
-                self.isSessionRunning = self.session.isRunning
+                self.isSessionRunning = false
+                print("🔴 CameraFeedService: Session stopped")
             }
+            
             // Remove all inputs and outputs to prevent conflicts on reuse
             self.session.beginConfiguration()
-            for input in self.session.inputs {
+            let inputs = Array(self.session.inputs)
+            let outputs = Array(self.session.outputs)
+            print("🔴 CameraFeedService: Removing \(inputs.count) inputs and \(outputs.count) outputs")
+            for input in inputs {
                 self.session.removeInput(input)
             }
-            for output in self.session.outputs {
+            for output in outputs {
                 self.session.removeOutput(output)
             }
             self.session.commitConfiguration()
+            print("🔴 CameraFeedService: Cleanup completed")
         }
         
+        // Wait for cleanup to complete, but with a timeout to avoid deadlock
+        // Use a short timeout - if cleanup takes longer, something is wrong
+        let result = cleanupSemaphore.wait(timeout: .now() + .seconds(2))
+        if result == .timedOut {
+            print("⚠️ CameraFeedService.stopSession() cleanup timed out - this may indicate a problem")
+        }
+        
+        // Remove preview layer from its superlayer on main thread
+        DispatchQueue.main.async { [weak self] in
+            self?.videoPreviewLayer.removeFromSuperlayer()
+            print("🔴 CameraFeedService: Preview layer removed")
+        }
     }
     
     
