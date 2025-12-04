@@ -124,7 +124,6 @@ class CameraView: UIView {
     }
 
   @objc var frameLimit: NSNumber = DefaultConstants.FRAME_LIMIT
-
     @objc var orientation: NSNumber = 0 {
         didSet {
 //            let result =  CGFloat(truncating: orientation)
@@ -469,7 +468,6 @@ extension CameraView: PoseLandmarkerServiceLiveStreamDelegate {
                 guard let weakSelf = self else { return }
                 //   weakSelf.inferenceResultDeliveryDelegate?.didPerformInference(result: result)
                 guard let poseLandmarkerResult = result?.poseLandmarkerResults.first as? PoseLandmarkerResult else { return }
-
               //  let limit = ((self?.landmarkData.frameRate)!)/6
                 
              //   self!.frameCount =  self!.frameCount+1;
@@ -551,7 +549,6 @@ extension CameraView: PoseLandmarkerServiceLiveStreamDelegate {
                         // Handle the case where `results` is nil
                         //                print("No landmarks found")
                     }
-
               //  }
                 
                 if self!.previewView != nil, let cameraService = weakSelf.cameraFeedService {

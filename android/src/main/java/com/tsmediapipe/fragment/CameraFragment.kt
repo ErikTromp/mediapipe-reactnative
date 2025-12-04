@@ -205,12 +205,12 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
       CameraSelector.Builder().requireLensFacing(cameraFacing).build()
 
     preview = Preview.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3)
-      .setTargetRotation(fragmentCameraBinding.viewFinder.display.rotation)
+      .setTargetRotation(_fragmentCameraBinding?.viewFinder?.display?.rotation ?: 0)
       .build()
 
     imageAnalyzer =
       ImageAnalysis.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3)
-        .setTargetRotation(fragmentCameraBinding.viewFinder.display.rotation)
+        .setTargetRotation(_fragmentCameraBinding?.viewFinder?.display?.rotation ?: 0)
         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
         .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
         .build()
@@ -260,12 +260,10 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
 
   override fun onConfigurationChanged(newConfig: Configuration) {
     super.onConfigurationChanged(newConfig)
-    if (_fragmentCameraBinding != null) {
-      // Keep analyzer and preview aligned with the current display rotation
-      imageAnalyzer?.targetRotation =
-        fragmentCameraBinding.viewFinder.display.rotation
-      preview?.targetRotation =
-        fragmentCameraBinding.viewFinder.display.rotation
+    // Keep analyzer and preview aligned with the current display rotation
+    _fragmentCameraBinding?.viewFinder?.display?.let { display ->
+      imageAnalyzer?.targetRotation = display.rotation
+      preview?.targetRotation = display.rotation
     }
   }
 
