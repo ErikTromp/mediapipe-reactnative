@@ -26,4 +26,15 @@ class TsMediapipeViewManager: RCTViewManager {
             view.switchCamera()
         }
     }
+    
+    @objc func getCameraInfo(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        DispatchQueue.main.async { [weak self] in
+            guard let view = self?.currentCameraView else {
+                reject("CAMERA_NOT_READY", "Camera view is not initialized", nil)
+                return
+            }
+            let info = view.getCameraInfo()
+            resolve(info)
+        }
+    }
 }

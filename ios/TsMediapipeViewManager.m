@@ -22,4 +22,7 @@ RCT_EXPORT_VIEW_PROPERTY(rightLeg, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(leftAnkle, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(rightAnkle, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(frameLimit, NSNumber)
+
+RCT_EXTERN_METHOD(getCameraInfo:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
 @end

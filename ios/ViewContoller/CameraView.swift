@@ -287,6 +287,13 @@ class CameraView: UIView {
         }
         service.switchCamera()
     }
+    
+    func getCameraInfo() -> [String: Any] {
+        guard let service = cameraFeedService, !isCleanedUp else {
+            return ["isFrontCamera": false, "isPreviewMirrored": false, "isMediaPipeMirrored": false]
+        }
+        return service.getCameraInfo()
+    }
 
     override func willMove(toSuperview newSuperview: UIView?) {
         if newSuperview == nil {

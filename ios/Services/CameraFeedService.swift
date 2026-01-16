@@ -320,15 +320,38 @@ class CameraFeedService: NSObject {
             // Update video orientation
             self.videoPreviewLayer.connection?.videoOrientation = .portrait
             self.videoDataOutput.connection(with: .video)?.videoOrientation = .portrait
-            self.videoDataOutput.connection(with: .video)?.isVideoMirrored = self.cameraPosition == .front
+            // CRITICAL: Do NOT set isVideoMirrored on videoDataOutput connection
+            // Setting it here would physically mirror the pixel buffer in CMSampleBuffer
+            // We only want to mirror the preview display, not the actual data
             
-            // Mirror the preview layer if using front camera
+            // Mirror the preview layer if using front camera (visual only, doesn't affect pixel buffer)
             self.videoPreviewLayer.connection?.automaticallyAdjustsVideoMirroring = false
             self.videoPreviewLayer.connection?.isVideoMirrored = self.cameraPosition == .front
             
             self.session.commitConfiguration()
             
         }
+    }
+    
+    /**
+     * Get the current camera position and mirroring status.
+     * 
+     * Note: On iOS, the preview display is mirrored for front camera via isVideoMirrored,
+     * but the actual pixel buffer (used for base64 images and MediaPipe processing) is NEVER mirrored.
+     * isVideoMirrored only affects visual preview rendering, not the underlying CMSampleBuffer data.
+     */
+    func getCameraInfo() -> [String: Any] {
+        let isFrontCamera = cameraPosition == .front
+        // Preview display is mirrored for front camera (visual only)
+        let isPreviewMirrored = isFrontCamera
+        // Base64 images and MediaPipe frames are NEVER mirrored
+        let isMediaPipeMirrored = false
+        
+        return [
+            "isFrontCamera": isFrontCamera,
+            "isPreviewMirrored": isPreviewMirrored,
+            "isMediaPipeMirrored": isMediaPipeMirrored
+        ]
     }
     
     /**
@@ -436,9 +459,11 @@ class CameraFeedService: NSObject {
                 
                 connection.videoOrientation = isPortrait ? .portrait : .landscapeRight
                 
-                if cameraPosition == .front && connection.isVideoOrientationSupported {
-                    connection.isVideoMirrored = true
-                }
+                // CRITICAL: Do NOT set isVideoMirrored on videoDataOutput connection
+                // Setting it here would physically mirror the pixel buffer in CMSampleBuffer
+                // We want non-mirrored data for MediaPipe processing and base64 images
+                // Preview mirroring is handled separately on videoPreviewLayer.connection
+                
                 if !self.isPortrait {
                     videoPreviewLayer.connection?.videoOrientation = .landscapeRight
                 }
