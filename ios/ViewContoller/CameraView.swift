@@ -561,6 +561,8 @@ extension CameraView: PoseLandmarkerServiceLiveStreamDelegate {
                 if self!.previewView != nil, let cameraService = weakSelf.cameraFeedService {
                     let orientaiton =  self!.isPortrait ? UIDevice.current.orientation : UIDeviceOrientation(rawValue: 3)
                     let imageSize = cameraService.videoResolution
+                    let cameraInfo = cameraService.getCameraInfo()
+                    let isFrontCamera = cameraInfo["isFrontCamera"] as? Bool ?? false
                     let poseOverlays = OverlayView().poseOverlays(
                         fromMultiplePoseLandmarks: poseLandmarkerResult.landmarks,
                         inferredOnImageOfSize: imageSize,
@@ -572,7 +574,8 @@ extension CameraView: PoseLandmarkerServiceLiveStreamDelegate {
                     weakSelf.overlayView.draw(poseOverlays: poseOverlays,
                                               inBoundsOfContentImageOfSize: imageSize,
                                               imageContentMode: cameraService.videoGravity.contentMode,
-                                              isPortrait: self!.isPortrait)
+                                              isPortrait: self!.isPortrait,
+                                              isFrontCamera: isFrontCamera)
                 }
             }
         }

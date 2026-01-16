@@ -22,29 +22,32 @@ class OverlayView: UIView {
     
     var poseOverlays: [PoseOverlay] = []
     
-    private var contentImageSize: CGSize = CGSizeZero
-    var imageContentMode: UIView.ContentMode = .scaleAspectFit
-    private var orientation = UIDeviceOrientation.portrait
-    
-    private var edgeOffset: CGFloat = 0.0
+  private var contentImageSize: CGSize = CGSizeZero
+  var imageContentMode: UIView.ContentMode = .scaleAspectFit
+  private var orientation = UIDeviceOrientation.portrait
+  private var isFrontCamera: Bool = false
+  
+  private var edgeOffset: CGFloat = 0.0
     
     
     // MARK: Public Functions
-    func draw(
-        poseOverlays: [PoseOverlay],
-        inBoundsOfContentImageOfSize imageSize: CGSize,
-        edgeOffset: CGFloat = 0.0,
-        imageContentMode: UIView.ContentMode,
-        isPortrait: Bool) {
-            
-            self.clear()
-            contentImageSize = imageSize
-            self.edgeOffset = edgeOffset
-            self.poseOverlays = poseOverlays
-            self.imageContentMode = imageContentMode
-            orientation = UIDevice.current.orientation
-            self.setNeedsDisplay()
-        }
+  func draw(
+    poseOverlays: [PoseOverlay],
+    inBoundsOfContentImageOfSize imageSize: CGSize,
+    edgeOffset: CGFloat = 0.0,
+    imageContentMode: UIView.ContentMode,
+    isPortrait: Bool,
+    isFrontCamera: Bool = false) {
+          
+          self.clear()
+          contentImageSize = imageSize
+          self.edgeOffset = edgeOffset
+          self.poseOverlays = poseOverlays
+          self.imageContentMode = imageContentMode
+          self.isFrontCamera = isFrontCamera
+          orientation = UIDevice.current.orientation
+          self.setNeedsDisplay()
+      }
     
     
     func redrawPoseOverlays(forNewDeviceOrientation deviceOrientation:UIDeviceOrientation) {
@@ -72,12 +75,29 @@ class OverlayView: UIView {
         setNeedsDisplay()
     }
     
-    override func draw(_ rect: CGRect) {
-        for poseOverlay in poseOverlays {
-            drawLines(poseOverlay.lines)
-            //      drawDots(poseOverlay.dots)
-        }
+  override func draw(_ rect: CGRect) {
+    guard let context = UIGraphicsGetCurrentContext() else { return }
+    
+    // Save graphics state before applying transforms
+    context.saveGState()
+    
+    // Mirror overlay rendering horizontally for front camera to match preview display
+    // Note: This only affects visual overlay, NOT the landmark data sent to JS
+    if isFrontCamera {
+      let centerX = bounds.width / 2.0
+      context.translateBy(x: centerX, y: 0)
+      context.scaleBy(x: -1.0, y: 1.0)
+      context.translateBy(x: -centerX, y: 0)
     }
+    
+    for poseOverlay in poseOverlays {
+      drawLines(poseOverlay.lines)
+      //      drawDots(poseOverlay.dots)
+    }
+    
+    // Restore graphics state
+    context.restoreGState()
+  }
     
     // MARK: Private Functions
     private func rectAfterApplyingBoundsAdjustment(

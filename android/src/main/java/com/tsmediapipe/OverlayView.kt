@@ -25,6 +25,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
   private var offsetY: Float = 0f
   private var imageWidth: Int = 1
   private var imageHeight: Int = 1
+  private var isFrontCamera: Boolean = false
 
   init {
     initPaints()
@@ -51,6 +52,16 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 
   override fun draw(canvas: Canvas) {
     super.draw(canvas)
+
+    // Save canvas state before applying transforms
+    canvas.save()
+    
+    // Mirror overlay rendering horizontally for front camera to match preview display
+    // Note: This only affects visual overlay, NOT the landmark data sent to JS
+    if (isFrontCamera) {
+      val centerX = width / 2f
+      canvas.scale(-1f, 1f, centerX, 0f)
+    }
 
     val face = GlobalState.isFaceEnabled
     val torso = GlobalState.isTorsoEnabled
@@ -184,18 +195,23 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
         }
       }
     }
+    
+    // Restore canvas state
+    canvas.restore()
   }
 
   fun setResults(
     poseLandmarkerResults: PoseLandmarkerResult,
     imageHeight: Int,
     imageWidth: Int,
-    runningMode: RunningMode = RunningMode.LIVE_STREAM
+    runningMode: RunningMode = RunningMode.LIVE_STREAM,
+    isFrontCamera: Boolean = false
   ) {
     results = poseLandmarkerResults
 
     this.imageHeight = imageHeight
     this.imageWidth = imageWidth
+    this.isFrontCamera = isFrontCamera
 
     scaleFactor = when (runningMode) {
       RunningMode.IMAGE,
