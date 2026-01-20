@@ -431,6 +431,16 @@ class CameraFeedService: NSObject {
             let videoDeviceInput = try AVCaptureDeviceInput(device: camera)
             if session.canAddInput(videoDeviceInput) {
                 session.addInput(videoDeviceInput)
+                
+                // Reset zoom to 1.0 to prevent zoom-in on first recording
+                do {
+                    try camera.lockForConfiguration()
+                    camera.videoZoomFactor = 1.0
+                    camera.unlockForConfiguration()
+                } catch {
+                    // Silently fail if zoom can't be set
+                }
+                
                 return true
             } else {
                 return false

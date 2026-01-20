@@ -25,6 +25,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
   private var offsetY: Float = 0f
   private var imageWidth: Int = 1
   private var imageHeight: Int = 1
+  private var isFrontCamera: Boolean = true
 
   init {
     initPaints()
@@ -81,103 +82,99 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
         for ((count, it) in PoseLandmarker.POSE_LANDMARKS.withIndex()) {
           if (face && it.start() in 0..10) {
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it!!.start()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.start()].y()),
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it.end()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.end()].y()),
               linePaint
             )
           }
 
           if (torso && ((it.start() == 11 && it.end() == 12) || (it.start() == 23 && it.end() == 24) || (it.start() == 11 && it.end() == 23) || (it.start() == 12 && it.end() == 24))) {
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it!!.start()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.start()].y()),
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it.end()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.end()].y()),
               linePaint
             )
           }
 
           if (leftArm && ((it.start() == 11 && it.end() == 13) || (it.start() == 13 && it.end() == 15))) {
-            print("left arm true cond")
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it!!.start()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.start()].y()),
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it.end()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.end()].y()),
               linePaint
             )
           }
 
           if (rightArm && ((it.start() == 12 && it.end() == 14) || (it.start() == 14 && it.end() == 16))) {
-            print("right arm true cond")
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it!!.start()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.start()].y()),
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it.end()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.end()].y()),
               linePaint
             )
           }
 
           if (leftLeg && ((it.start() == 23 && it.end() == 25) || (it.start() == 25 && it.end() == 27))) {
-            print("left leg true cond")
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it!!.start()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.start()].y()),
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it.end()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.end()].y()),
               linePaint
             )
           }
 
           if (rightLeg && ((it.start() == 24 && it.end() == 26) || (it.start() == 26 && it.end() == 28))) {
-            print("right leg true cond")
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it!!.start()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.start()].y()),
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it.end()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.end()].y()),
               linePaint
             )
           }
 
           if (leftWrist && ((it.start() == 15 && it.end() == 21) || (it.start() == 15 && it.end() == 17) || (it.start() == 15 && it.end() == 19) || (it.start() == 17 && it.end() == 19))) {
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it!!.start()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.start()].y()),
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it.end()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.end()].y()),
               linePaint
             )
           }
 
           if (rightWrist && ((it.start() == 16 && it.end() == 22) || (it.start() == 16 && it.end() == 20) || (it.start() == 16 && it.end() == 18) || (it.start() == 18 && it.end() == 20))) {
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it!!.start()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.start()].y()),
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it.end()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.end()].y()),
               linePaint
             )
           }
 
           if (leftAnkle && ((it.start() == 27 && it.end() == 29) || (it.start() == 27 && it.end() == 31) || (it.start() == 29 && it.end() == 31))) {
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it!!.start()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.start()].y()),
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it.end()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.end()].y()),
               linePaint
             )
           }
           if (rightAnkle && ((it.start() == 28 && it.end() == 30) || (it.start() == 28 && it.end() == 32) || (it.start() == 30 && it.end() == 32))) {
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it!!.start()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.start()].y()),
+              getTransformedX(poseLandmarkerResult.landmarks()[0][it.end()].x()),
+              getTransformedY(poseLandmarkerResult.landmarks()[0][it.end()].y()),
               linePaint
             )
           }
@@ -190,12 +187,14 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     poseLandmarkerResults: PoseLandmarkerResult,
     imageHeight: Int,
     imageWidth: Int,
-    runningMode: RunningMode = RunningMode.LIVE_STREAM
+    runningMode: RunningMode = RunningMode.LIVE_STREAM,
+    isFrontCamera: Boolean = true
   ) {
     results = poseLandmarkerResults
 
     this.imageHeight = imageHeight
     this.imageWidth = imageWidth
+    this.isFrontCamera = isFrontCamera
 
     scaleFactor = when (runningMode) {
       RunningMode.IMAGE,
@@ -216,6 +215,22 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     offsetX = (width - scaledImageWidth) / 2f
     offsetY = (height - scaledImageHeight) / 2f
     invalidate()
+  }
+
+  // Helper function to get X coordinate with mirroring applied for front camera
+  private fun getTransformedX(normalizedX: Float): Float {
+    val x = normalizedX * imageWidth * scaleFactor
+    return if (isFrontCamera) {
+      // Mirror the X coordinate for front camera to match the mirrored preview
+      width - x - offsetX
+    } else {
+      x + offsetX
+    }
+  }
+
+  // Helper function to get Y coordinate
+  private fun getTransformedY(normalizedY: Float): Float {
+    return normalizedY * imageHeight * scaleFactor + offsetY
   }
 
   companion object {
