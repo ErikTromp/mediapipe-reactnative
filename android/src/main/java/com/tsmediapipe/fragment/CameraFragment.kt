@@ -227,6 +227,9 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
         this, cameraSelector, preview, imageAnalyzer
       )
 
+      // Reset zoom to default to prevent zoom-in on first recording
+      camera?.cameraControl?.setLinearZoom(0f)
+
       if (_fragmentCameraBinding != null) {
         preview?.setSurfaceProvider(fragmentCameraBinding.viewFinder.surfaceProvider)
       }

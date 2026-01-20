@@ -155,20 +155,20 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 
           if (rightWrist && ((it.start() == 16 && it.end() == 22) || (it.start() == 16 && it.end() == 20) || (it.start() == 16 && it.end() == 18) || (it.start() == 18 && it.end() == 20))) {
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor,
+              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
+              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
               linePaint
             )
           }
 
           if (leftAnkle && ((it.start() == 27 && it.end() == 29) || (it.start() == 27 && it.end() == 31) || (it.start() == 29 && it.end() == 31))) {
             canvas.drawLine(
-              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor,
-              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor,
+              poseLandmarkerResult.landmarks()[0][it!!.start()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor + offsetY,
+              poseLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor + offsetX,
+              poseLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor + offsetY,
               linePaint
             )
           }
