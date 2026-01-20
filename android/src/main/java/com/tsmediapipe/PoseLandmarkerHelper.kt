@@ -160,17 +160,18 @@ class PoseLandmarkerHelper(
     imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
     imageProxy.close()
 
-    // Build a transform matrix that rotates around the image center and mirrors (front camera)
+    // Build a transform matrix that rotates around the image center
+    // NOTE: We do NOT mirror the image - frames and landmarks must remain non-mirrored
+    // CameraX's ImageProxy provides raw, non-mirrored camera sensor data by default
+    // Only rotation metadata is applied to match device orientation
     val cx = imageProxy.width / 2f
     val cy = imageProxy.height / 2f
     val matrix = Matrix().apply {
       // Rotate the frame around center to match display orientation
+      // This uses the rotation metadata from the camera sensor
       postRotate(imageProxy.imageInfo.rotationDegrees.toFloat(), cx, cy)
-
-      // Mirror horizontally around center for front camera so overlay aligns
-      if (isFrontCamera) {
-        postScale(-1f, 1f, cx, cy)
-      }
+      // Mirroring removed - data (base64 images and landmarks) must never be mirrored
+      // CameraX guarantees non-mirrored raw sensor data regardless of camera facing
     }
     val rotatedBitmap = Bitmap.createBitmap(
       bitmapBuffer, 0, 0, bitmapBuffer.width, bitmapBuffer.height,
@@ -181,6 +182,7 @@ class PoseLandmarkerHelper(
     val mpImage = BitmapImageBuilder(rotatedBitmap).build()
 
     // Encode current frame bitmap to Base64 (JPEG) and store by timestamp for retrieval on callback
+    // This bitmap is NOT mirrored, ensuring base64 images are never mirrored
     runCatching {
       val byteArrayOutputStream = ByteArrayOutputStream()
       rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, byteArrayOutputStream)

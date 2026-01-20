@@ -54,6 +54,22 @@ const switchCamera = isAndroid
   ? MediaPipeNativeModule.switchCameraMethod
   : TsMediapipeViewManager.switchCamera;
 
+/**
+ * Get current camera information including mirroring status.
+ * 
+ * Returns a Promise that resolves to:
+ * - isFrontCamera: boolean - true if front camera is active
+ * - isMirrored: boolean (Android) - always false (base64 images and landmarks are NEVER mirrored)
+ * - isPreviewMirrored: boolean (iOS) - true if preview display is mirrored (visual only)
+ * - isMediaPipeMirrored: boolean (iOS) - always false (base64 images and landmarks are NEVER mirrored)
+ * 
+ * Important: Base64 images and landmarks passed via onLandmark are NEVER mirrored on either platform,
+ * regardless of camera position. Preview display mirroring (iOS) only affects visual rendering.
+ */
+const getCameraInfo = isAndroid
+  ? MediaPipeNativeModule.getCameraInfo
+  : TsMediapipeViewManager.getCameraInfo;
+
 const TsMediapipe =
   UIManager.getViewManagerConfig(ComponentName) != null
     ? requireNativeComponent<TsMediapipeProps>(ComponentName)
@@ -148,4 +164,4 @@ const TsMediapipeView: React.FC<MediapipeComponentProps> = (props) => {
   );
 };
 
-export { TsMediapipeView as RNMediapipe, switchCamera };
+export { TsMediapipeView as RNMediapipe, switchCamera, getCameraInfo };

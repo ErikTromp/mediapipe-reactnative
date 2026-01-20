@@ -261,6 +261,14 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
     bindCameraUseCases()
   }
 
+  /**
+   * Get the current camera facing direction.
+   * Returns CameraSelector.LENS_FACING_FRONT or CameraSelector.LENS_FACING_BACK
+   */
+  fun getCameraFacing(): Int {
+    return cameraFacing
+  }
+
   override fun onConfigurationChanged(newConfig: Configuration) {
     super.onConfigurationChanged(newConfig)
     // Keep analyzer and preview aligned with the current display rotation
