@@ -41,17 +41,9 @@ class OverlayView: UIView {
             self.clear()
             contentImageSize = imageSize
             self.edgeOffset = edgeOffset
+            self.poseOverlays = poseOverlays
             self.imageContentMode = imageContentMode
             orientation = UIDevice.current.orientation
-            
-            // Apply horizontal mirroring for front camera to match the mirrored preview
-            if isFrontCamera {
-                self.transform = CGAffineTransform(scaleX: -1, y: 1)
-            } else {
-                self.transform = .identity
-            }
-            
-            self.poseOverlays = poseOverlays
             self.setNeedsDisplay()
         }
     
