@@ -368,7 +368,8 @@ class CameraFragment : Fragment(), PoseLandmarkerHelper.LandmarkerListener {
           resultBundle.results.first(),
           resultBundle.inputImageHeight,
           resultBundle.inputImageWidth,
-          RunningMode.LIVE_STREAM
+          RunningMode.LIVE_STREAM,
+          cameraFacing == CameraSelector.LENS_FACING_FRONT
         )
         fragmentCameraBinding.myOverlay.invalidate()
       }

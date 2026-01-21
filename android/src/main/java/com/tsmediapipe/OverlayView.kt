@@ -25,6 +25,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
   private var offsetY: Float = 0f
   private var imageWidth: Int = 1
   private var imageHeight: Int = 1
+  private var isFrontCamera: Boolean = false
 
   init {
     initPaints()
@@ -186,12 +187,14 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     poseLandmarkerResults: PoseLandmarkerResult,
     imageHeight: Int,
     imageWidth: Int,
-    runningMode: RunningMode = RunningMode.LIVE_STREAM
+    runningMode: RunningMode = RunningMode.LIVE_STREAM,
+    isFrontCamera: Boolean = false
   ) {
     results = poseLandmarkerResults
 
     this.imageHeight = imageHeight
     this.imageWidth = imageWidth
+    this.isFrontCamera = isFrontCamera
 
     scaleFactor = when (runningMode) {
       RunningMode.IMAGE,
@@ -214,9 +217,15 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     invalidate()
   }
 
-  // Helper function to get X coordinate with offset
+
+  // Helper function to get X coordinate, mirrored for front camera
   private fun getTransformedX(normalizedX: Float): Float {
-    return normalizedX * imageWidth * scaleFactor + offsetX
+    val x = normalizedX * imageWidth * scaleFactor + offsetX
+    return if (isFrontCamera) {
+      width - x
+    } else {
+      x
+    }
   }
 
   // Helper function to get Y coordinate with offset
