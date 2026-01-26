@@ -570,7 +570,7 @@ extension CameraView: PoseLandmarkerServiceLiveStreamDelegate {
                         ovelayViewSize: weakSelf.overlayView.bounds.size,
                         imageContentMode: weakSelf.overlayView.imageContentMode,
                         andOrientation: UIImage.Orientation.from(
-                            deviceOrientation:  UIDevice.current.orientation ), isPortrait: self!.isPortrait, propDictionary: self!.propDictionary!)
+                            deviceOrientation:  UIDevice.current.orientation ), isPortrait: self!.isPortrait, propDictionary: self!.propDictionary!, isFrontCamera: isFrontCamera)
                     weakSelf.overlayView.clear()
                     weakSelf.overlayView.draw(poseOverlays: poseOverlays,
                                               inBoundsOfContentImageOfSize: imageSize,

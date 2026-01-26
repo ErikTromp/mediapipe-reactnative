@@ -284,7 +284,7 @@ class OverlayView: UIView {
         inferredOnImageOfSize originalImageSize: CGSize,
         ovelayViewSize: CGSize,
         imageContentMode: UIView.ContentMode,
-        andOrientation orientation: UIImage.Orientation, isPortrait: Bool, propDictionary: [String: Bool]) -> [PoseOverlay] {
+        andOrientation orientation: UIImage.Orientation, isPortrait: Bool, propDictionary: [String: Bool], isFrontCamera: Bool = false) -> [PoseOverlay] {
             
             var poseOverlays: [PoseOverlay] = []
             
@@ -309,7 +309,13 @@ class OverlayView: UIView {
                     transformedPoseLandmarks = poseLandmarks.map({CGPoint(x: CGFloat($0.x), y: CGFloat($0.y))})
                 }
                 
-                let dots: [CGPoint] = transformedPoseLandmarks.map({CGPoint(x: CGFloat($0.x) * originalImageSize.width * offsetsAndScaleFactor.scaleFactor + offsetsAndScaleFactor.xOffset, y: CGFloat($0.y) * originalImageSize.height * offsetsAndScaleFactor.scaleFactor + offsetsAndScaleFactor.yOffset)})
+                let dots: [CGPoint] = transformedPoseLandmarks.map({
+                    let x = CGFloat($0.x) * originalImageSize.width * offsetsAndScaleFactor.scaleFactor + offsetsAndScaleFactor.xOffset
+                    let y = CGFloat($0.y) * originalImageSize.height * offsetsAndScaleFactor.scaleFactor + offsetsAndScaleFactor.yOffset
+                    // Mirror X coordinate for front camera to match the mirrored preview
+                    let finalX = isFrontCamera ? (ovelayViewSize.width - x) : x
+                    return CGPoint(x: finalX, y: y)
+                })
                 //          let lines: [Line] = PoseLandmarker.poseLandmarks
                 //            .map({ connection in
                 //              let start = dots[Int(connection.start)]
