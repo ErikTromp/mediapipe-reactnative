@@ -4,12 +4,13 @@ import React
 @objc(TsMediapipeViewManager)
 class TsMediapipeViewManager: RCTViewManager {
     
-    // Use weak reference to avoid retaining views that are being deallocated
-    private weak var currentCameraView: CameraView?
+    // Strong reference to the camera view - React Native also holds a reference
+    // so this won't cause a retain cycle, but ensures switchCamera works reliably
+    private var cameraView: CameraView?
     
     override func view() -> (UIView) {
         let view = CameraView()
-        currentCameraView = view
+        cameraView = view
         return view
     }
     
@@ -18,23 +19,15 @@ class TsMediapipeViewManager: RCTViewManager {
     }
     
     @objc func switchCamera() {
-        // Ensure we're on main thread and check if view is still valid
-        DispatchQueue.main.async { [weak self] in
-            guard let view = self?.currentCameraView else {
-                return
-            }
-            view.switchCamera()
-        }
+        cameraView?.switchCamera()
     }
     
     @objc func getCameraInfo(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        DispatchQueue.main.async { [weak self] in
-            guard let view = self?.currentCameraView else {
-                reject("CAMERA_NOT_READY", "Camera view is not initialized", nil)
-                return
-            }
-            let info = view.getCameraInfo()
-            resolve(info)
+        guard let view = cameraView else {
+            reject("CAMERA_NOT_READY", "Camera view is not initialized", nil)
+            return
         }
+        let info = view.getCameraInfo()
+        resolve(info)
     }
 }
