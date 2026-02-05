@@ -304,27 +304,35 @@ class CameraFeedService: NSObject {
     
     // MARK: - Camera Switching
     func switchCamera() {
-        
-        cameraPosition = cameraPosition == .back ? .front : .back
-        
+        let previousPosition = cameraPosition
+        let desiredPosition: AVCaptureDevice.Position = (cameraPosition == .back) ? .front : .back
+
         sessionQueue.async {
             self.session.beginConfiguration()
-            
-            // Remove existing input
-            if let currentInput = self.session.inputs.first {
-                self.session.removeInput(currentInput)
+
+            // Remove all existing inputs (defensive: ensure we fully detach current camera)
+            for input in self.session.inputs {
+                self.session.removeInput(input)
             }
-            
-            self.addVideoDeviceInput()
-            
+
+            // Try to add the desired camera input
+            self.cameraPosition = desiredPosition
+            let didAddDesiredInput = self.addVideoDeviceInput()
+
+            // If adding desired camera failed, revert to previous camera
+            if !didAddDesiredInput {
+                self.cameraPosition = previousPosition
+                _ = self.addVideoDeviceInput()
+            }
+
             // Update video data output orientation (this is fine on sessionQueue)
             self.videoDataOutput.connection(with: .video)?.videoOrientation = .portrait
             // CRITICAL: Do NOT set isVideoMirrored on videoDataOutput connection
             // Setting it here would physically mirror the pixel buffer in CMSampleBuffer
             // We only want to mirror the preview display, not the actual data
-            
+
             self.session.commitConfiguration()
-            
+
             // IMPORTANT: Preview layer connection must be configured on main thread
             // AVCaptureVideoPreviewLayer is a CALayer and its properties are UIKit related
             let isFrontCamera = self.cameraPosition == .front
