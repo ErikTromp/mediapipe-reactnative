@@ -317,19 +317,22 @@ class CameraFeedService: NSObject {
             
             self.addVideoDeviceInput()
             
-            // Update video orientation
-            self.videoPreviewLayer.connection?.videoOrientation = .portrait
+            // Update video data output orientation (this is fine on sessionQueue)
             self.videoDataOutput.connection(with: .video)?.videoOrientation = .portrait
             // CRITICAL: Do NOT set isVideoMirrored on videoDataOutput connection
             // Setting it here would physically mirror the pixel buffer in CMSampleBuffer
             // We only want to mirror the preview display, not the actual data
             
-            // Mirror the preview layer if using front camera (visual only, doesn't affect pixel buffer)
-            self.videoPreviewLayer.connection?.automaticallyAdjustsVideoMirroring = false
-            self.videoPreviewLayer.connection?.isVideoMirrored = self.cameraPosition == .front
-            
             self.session.commitConfiguration()
             
+            // IMPORTANT: Preview layer connection must be configured on main thread
+            // AVCaptureVideoPreviewLayer is a CALayer and its properties are UIKit related
+            let isFrontCamera = self.cameraPosition == .front
+            DispatchQueue.main.async {
+                self.videoPreviewLayer.connection?.videoOrientation = .portrait
+                self.videoPreviewLayer.connection?.automaticallyAdjustsVideoMirroring = false
+                self.videoPreviewLayer.connection?.isVideoMirrored = isFrontCamera
+            }
         }
     }
     
