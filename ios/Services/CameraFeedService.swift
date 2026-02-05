@@ -304,28 +304,20 @@ class CameraFeedService: NSObject {
     
     // MARK: - Camera Switching
     func switchCamera() {
-        let previousPosition = cameraPosition
-        let desiredPosition: AVCaptureDevice.Position = (cameraPosition == .back) ? .front : .back
+        // Update position synchronously before async block - original working approach
+        cameraPosition = cameraPosition == .back ? .front : .back
 
         sessionQueue.async {
             self.session.beginConfiguration()
 
-            // Remove all existing inputs (defensive: ensure we fully detach current camera)
-            for input in self.session.inputs {
-                self.session.removeInput(input)
+            // Remove existing video input only (don't remove all - can break session state)
+            if let currentInput = self.session.inputs.first {
+                self.session.removeInput(currentInput)
             }
 
-            // Try to add the desired camera input
-            self.cameraPosition = desiredPosition
-            let didAddDesiredInput = self.addVideoDeviceInput()
+            _ = self.addVideoDeviceInput()
 
-            // If adding desired camera failed, revert to previous camera
-            if !didAddDesiredInput {
-                self.cameraPosition = previousPosition
-                _ = self.addVideoDeviceInput()
-            }
-
-            // Update video data output orientation (this is fine on sessionQueue)
+            // Update video data output orientation
             self.videoDataOutput.connection(with: .video)?.videoOrientation = .portrait
             // CRITICAL: Do NOT set isVideoMirrored on videoDataOutput connection
             // Setting it here would physically mirror the pixel buffer in CMSampleBuffer
@@ -333,8 +325,7 @@ class CameraFeedService: NSObject {
 
             self.session.commitConfiguration()
 
-            // IMPORTANT: Preview layer connection must be configured on main thread
-            // AVCaptureVideoPreviewLayer is a CALayer and its properties are UIKit related
+            // Preview layer connection on main thread (UIKit/CALayer)
             let isFrontCamera = self.cameraPosition == .front
             DispatchQueue.main.async {
                 self.videoPreviewLayer.connection?.videoOrientation = .portrait
