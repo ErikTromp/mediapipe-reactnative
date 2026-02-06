@@ -228,6 +228,8 @@ class CameraView: UIView {
 
     private func setupUI() {
         teardownUI()
+        // Reset the cleanup flag since we're setting up fresh
+        isCleanedUp = false
         requestCameraPermission()
         // Instantiate and add subviews
         previewView = UIView()
@@ -282,7 +284,16 @@ class CameraView: UIView {
     override func didSetProps(_ changedProps: [String]!) {
 
         if changedProps.contains("height") && changedProps.contains("width")  {
-            setupUI()
+            // Only recreate the camera pipeline if this is the initial setup
+            // or if the dimensions actually changed. This prevents unnecessary
+            // teardown/recreation on React re-renders (e.g. state changes like
+            // setSelectedCamera) which would destroy the active camera session.
+            let needsSetup = previewView == nil
+                || previewView.frame.width != CGFloat(widthInfo)
+                || previewView.frame.height != CGFloat(heightInfo)
+            if needsSetup {
+                setupUI()
+            }
         }
     }
 
