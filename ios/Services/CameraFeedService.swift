@@ -304,34 +304,32 @@ class CameraFeedService: NSObject {
     
     // MARK: - Camera Switching
     func switchCamera() {
-        // Update position synchronously before async block - original working approach
+        
         cameraPosition = cameraPosition == .back ? .front : .back
-
+        
         sessionQueue.async {
             self.session.beginConfiguration()
-
-            // Remove existing video input only (don't remove all - can break session state)
+            
+            // Remove existing input
             if let currentInput = self.session.inputs.first {
                 self.session.removeInput(currentInput)
             }
-
-            _ = self.addVideoDeviceInput()
-
-            // Update video data output orientation
+            
+            self.addVideoDeviceInput()
+            
+            // Update video orientation
+            self.videoPreviewLayer.connection?.videoOrientation = .portrait
             self.videoDataOutput.connection(with: .video)?.videoOrientation = .portrait
             // CRITICAL: Do NOT set isVideoMirrored on videoDataOutput connection
             // Setting it here would physically mirror the pixel buffer in CMSampleBuffer
             // We only want to mirror the preview display, not the actual data
-
+            
+            // Mirror the preview layer if using front camera (visual only, doesn't affect pixel buffer)
+            self.videoPreviewLayer.connection?.automaticallyAdjustsVideoMirroring = false
+            self.videoPreviewLayer.connection?.isVideoMirrored = self.cameraPosition == .front
+            
             self.session.commitConfiguration()
-
-            // Preview layer connection on main thread (UIKit/CALayer)
-            let isFrontCamera = self.cameraPosition == .front
-            DispatchQueue.main.async {
-                self.videoPreviewLayer.connection?.videoOrientation = .portrait
-                self.videoPreviewLayer.connection?.automaticallyAdjustsVideoMirroring = false
-                self.videoPreviewLayer.connection?.isVideoMirrored = isFrontCamera
-            }
+            
         }
     }
     
