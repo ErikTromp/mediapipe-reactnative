@@ -283,6 +283,17 @@ class CameraFeedService: NSObject {
         self.isPoseStarted = started
     }
     
+    /// Set the initial camera position before starting the session.
+    /// Used to restore camera position when CameraFeedService is recreated.
+    func setCameraPosition(_ position: AVCaptureDevice.Position) {
+        self.cameraPosition = position
+    }
+    
+    /// Get the current camera position.
+    func getCurrentCameraPosition() -> AVCaptureDevice.Position {
+        return self.cameraPosition
+    }
+    
   func setFrameLimit(limit: NSNumber) {
       self.frameLimit = limit
   }
@@ -304,52 +315,31 @@ class CameraFeedService: NSObject {
     
     // MARK: - Camera Switching
     func switchCamera() {
+        
+        cameraPosition = cameraPosition == .back ? .front : .back
+        
         sessionQueue.async {
             self.session.beginConfiguration()
-
-            // 1. Safely identify and remove ONLY the video input
-            //    Using .first is dangerous if you ever add audio or other inputs
-            if let currentVideoInput = self.session.inputs.first(where: { input in
-                guard let deviceInput = input as? AVCaptureDeviceInput else { return false }
-                return deviceInput.device.hasMediaType(.video)
-            }) {
-                self.session.removeInput(currentVideoInput)
+            
+            // Remove existing input
+            if let currentInput = self.session.inputs.first {
+                self.session.removeInput(currentInput)
             }
-
-            // 2. Toggle the position (inside sessionQueue to avoid race conditions)
-            self.cameraPosition = (self.cameraPosition == .back) ? .front : .back
-
-            // 3. Re-add the input with the new position
+            
             self.addVideoDeviceInput()
-
-            // 4. Configure the data output connection AFTER adding the new input
-            //    Connections are recreated when inputs change, so we must configure here
-            if let dataConnection = self.videoDataOutput.connection(with: .video) {
-                if dataConnection.isVideoOrientationSupported {
-                    dataConnection.videoOrientation = .portrait
-                }
-                // Do NOT mirror the actual pixel data — MediaPipe needs raw unmirrored frames
-                if dataConnection.isVideoMirroringSupported {
-                    dataConnection.isVideoMirrored = false
-                }
-            }
-
+            
+            // Update video orientation
+            self.videoPreviewLayer.connection?.videoOrientation = .portrait
+            self.videoDataOutput.connection(with: .video)?.videoOrientation = .portrait
+            // Do NOT mirror videoDataOutput - pixel buffer must stay non-mirrored
+            // for MediaPipe processing and base64 images
+            
+            // Mirror the preview layer if using front camera (visual only)
+            self.videoPreviewLayer.connection?.automaticallyAdjustsVideoMirroring = false
+            self.videoPreviewLayer.connection?.isVideoMirrored = self.cameraPosition == .front
+            
             self.session.commitConfiguration()
-
-            // 5. Update the preview layer on the MAIN thread
-            //    CALayers are part of UIKit/QuartzCore and MUST be touched on main
-            let isFront = (self.cameraPosition == .front)
-            DispatchQueue.main.async {
-                if let previewConnection = self.videoPreviewLayer.connection {
-                    if previewConnection.isVideoOrientationSupported {
-                        previewConnection.videoOrientation = .portrait
-                    }
-                    if previewConnection.isVideoMirroringSupported {
-                        previewConnection.automaticallyAdjustsVideoMirroring = false
-                        previewConnection.isVideoMirrored = isFront
-                    }
-                }
-            }
+            
         }
     }
     
@@ -441,18 +431,9 @@ class CameraFeedService: NSObject {
     
     /**
      This method tries to add an AVCaptureDeviceInput to the current AVCaptureSession.
-     Uses DiscoverySession for more reliable device lookup.
      */
-    @discardableResult
     private func addVideoDeviceInput() -> Bool {
-        let discoverySession = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInWideAngleCamera],
-            mediaType: .video,
-            position: cameraPosition
-        )
-        
-        guard let camera = discoverySession.devices.first else {
-            print("CameraFeedService: Could not find camera for position \(cameraPosition.rawValue)")
+        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: cameraPosition) else {
             return false
         }
         
@@ -460,24 +441,12 @@ class CameraFeedService: NSObject {
             let videoDeviceInput = try AVCaptureDeviceInput(device: camera)
             if session.canAddInput(videoDeviceInput) {
                 session.addInput(videoDeviceInput)
-                
-                // Reset zoom to 1.0 to prevent zoom-in on first recording
-                do {
-                    try camera.lockForConfiguration()
-                    camera.videoZoomFactor = 1.0
-                    camera.unlockForConfiguration()
-                } catch {
-                    // Silently fail if zoom can't be set
-                }
-                
                 return true
             } else {
-                print("CameraFeedService: Could not add video device input to session")
                 return false
             }
         } catch {
-            print("CameraFeedService: Error creating video device input: \(error)")
-            return false
+            fatalError("Cannot create video device input")
         }
     }
     

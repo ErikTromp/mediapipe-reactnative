@@ -25,6 +25,9 @@ class CameraView: UIView {
     var poseStart: Bool = true
     var latestSampleBuffer: CMSampleBuffer?
     
+    // Preserve camera position across setupUI() recreations
+    private var currentCameraPosition: AVCaptureDevice.Position = .front
+    
     private var isSessionRunning = false
     private var isObserving = false
     private var isCleanedUp = false // Flag to prevent double cleanup
@@ -247,6 +250,9 @@ class CameraView: UIView {
         // Create a new camera feed service with the new preview view
         cameraFeedService = CameraFeedService(previewView: previewView)
 
+        // Restore the camera position from before teardown (survives setupUI recreation)
+        cameraFeedService?.setCameraPosition(currentCameraPosition)
+
         initializePoseLandmarkerServiceOnSessionResumption()
 
 
@@ -286,6 +292,8 @@ class CameraView: UIView {
             return
         }
         service.switchCamera()
+        // Save the new position so it survives setupUI() recreation on re-render
+        currentCameraPosition = service.getCurrentCameraPosition()
     }
     
     func getCameraInfo() -> [String: Any] {
